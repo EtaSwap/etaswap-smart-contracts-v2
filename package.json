@@ -1,0 +1,25 @@
+{
+  "name": "etaswap-smart-contracts",
+  "version": "0.0.1",
+  "description": "Oracles and exchange",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx hardhat test",
+    "local-node": "npx @hashgraph/hedera-local restart -d"
+  },
+  "author": "Danylo Moshenskyi",
+  "license": "ISC",
+  "dependencies": {
+    "@hashgraph/hedera-local": "^2.4.5",
+    "@hashgraph/sdk": "^2.31.0",
+    "@nomicfoundation/hardhat-toolbox": "^2.0.1",
+    "@openzeppelin/contracts": "4.9.0",
+    "dotenv": "^16.0.3"
+  },
+  "devDependencies": {
+    "hardhat": "^2.12.6"
+  },
+  "directories": {
+    "test": "test"
+  }
+}
