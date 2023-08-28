@@ -9,24 +9,27 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../interfaces/IUniswapV2Router02.sol";
 import "../interfaces/IAdapter.sol";
+import './libraries/TransferHelper.sol';
 
 contract UniswapAdapter is Ownable, IAdapter {
     using SafeERC20 for IERC20;
     using Address for address;
     using Address for address payable;
 
-    IUniswapV2Router02 public immutable Router;
-    address payable public immutable FeeWallet;
-    uint256 public FeePromille;
+    IUniswapV2Router02 public immutable router;
+    address payable public immutable feeWallet;
+    uint256 public feePromille;
+    IERC20 public whbar;
 
-    constructor(address payable feeWallet, IUniswapV2Router02 router, uint256 feePromille) public {
-        FeeWallet = feeWallet;
-        Router = router;
-        FeePromille = feePromille;
+    constructor(address payable _feeWallet, IUniswapV2Router02 _router, uint256 _feePromille, address _whbar) public {
+        feeWallet = _feeWallet;
+        router = _router;
+        feePromille = _feePromille;
+        whbar = _whbar;
     }
 
-    function setFeePromille(uint256 feePromille) external onlyOwner {
-        FeePromille = feePromille;
+    function setFeePromille(uint256 _feePromille) external onlyOwner {
+        feePromille = _feePromille;
     }
 
     /**
@@ -46,11 +49,11 @@ contract UniswapAdapter is Ownable, IAdapter {
         uint256 amountTo,
         uint256 deadline,
         bool feeOnTransfer
-    ) external {
+    ) external payable {
         require(tokenFrom != tokenTo, "TOKEN_PAIR_INVALID");
 
-        uint256 fee = amountFrom * FeePromille / 1000;
-        _transfer(tokenFrom, fee, FeeWallet);
+        uint256 fee = amountFrom * feePromille / 1000;
+        _transfer(tokenFrom, fee, feeWallet);
 
         address[] memory path = new address[](2);
         path[0] = address(tokenFrom);
@@ -59,17 +62,38 @@ contract UniswapAdapter is Ownable, IAdapter {
         uint256 amountFromWithoutFee = amountFrom - fee;
         _approveSpender(tokenFrom, address(Router), amountFromWithoutFee);
         if (feeOnTransfer) {
-            uint[] memory amounts = Router.swapTokensForExactTokens(
-                amountTo,
-                amountFromWithoutFee,
-                path,
-                recipient,
-                deadline
-            );
-            uint256 change = amountFromWithoutFee - amounts[0];
-            _transfer(tokenFrom, change, recipient);
+            if (tokenFrom == whbar) {
+                uint[] memory amounts = router.swapETHForExactTokens{value: msg.value}(
+                    amountTo,
+                    path,
+                    recipient,
+                    deadline
+                );
+                uint256 change = msg.value - amounts[0];
+                _transfer(tokenFrom, change, recipient);
+            } else if (tokenTo == whbar) {
+                uint[] memory amounts = router.swapTokensForExactETH(
+                    amountTo,
+                    amountFromWithoutFee,
+                    path,
+                    recipient,
+                    deadline
+                );
+                uint256 change = amountFromWithoutFee - amounts[0];
+                _transfer(tokenFrom, change, recipient);
+            } else {
+                uint[] memory amounts = router.swapTokensForExactTokens(
+                    amountTo,
+                    amountFromWithoutFee,
+                    path,
+                    recipient,
+                    deadline
+                );
+                uint256 change = amountFromWithoutFee - amounts[0];
+                _transfer(tokenFrom, change, recipient);
+            }
         } else {
-            Router.swapExactTokensForTokens(
+            router.swapExactTokensForTokens(
                 amountFromWithoutFee,
                 amountTo,
                 path,
@@ -92,6 +116,15 @@ contract UniswapAdapter is Ownable, IAdapter {
     ) internal {
         if (amount > 0) {
             token.safeTransfer(recipient, amount);
+        }
+    }
+
+    function _transferHBAR(
+        uint256 amount,
+        address recipient
+    ) internal {
+        if (amount > 0) {
+            TransferHelper.safeTransferETH(recipient, amount);
         }
     }
 

@@ -48,15 +48,17 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard {
         emit AdapterSet(aggregatorId, addr);
     }
 
+    function adapterFee(string calldata aggregatorId) external view returns (uint256 fee) {
+        require(adapters[aggregatorId] != address(0), "ADAPTER_DOES_NOT_EXIST");
+        return IAdapter(adapters[aggregatorId]).FeePromille();
+    }
+
     /**
      * @dev Removes the adapter for an existing aggregator. This can't be undone.
      * @param aggregatorId Aggregator's identifier
      */
     function removeAdapter(string calldata aggregatorId) external onlyOwner {
-        require(
-            adapters[aggregatorId] != address(0),
-            "ADAPTER_DOES_NOT_EXIST"
-        );
+        require(adapters[aggregatorId] != address(0), "ADAPTER_DOES_NOT_EXIST");
         delete adapters[aggregatorId];
         adapterRemoved[aggregatorId] = true;
         emit AdapterRemoved(aggregatorId);
@@ -99,7 +101,7 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard {
 
         tokenFrom.safeTransferFrom(msg.sender, adapter, amountFrom);
 
-        IAdapter(adapter).swap(
+        IAdapter(adapter).swap{value: msg.value}(
             msg.sender,
             tokenFrom,
             tokenTo,
