@@ -16,6 +16,8 @@ import "./interfaces/IAdapter.sol";
  * @title Exchange
  */
 contract Exchange is Ownable, Pausable, ReentrancyGuard {
+    IERC20 private constant hbar = IERC20(0x0000000000000000000000000000000000000000);
+
     using SafeERC20 for IERC20;
     using Address for address;
     using Address for address payable;
@@ -50,7 +52,7 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard {
 
     function adapterFee(string calldata aggregatorId) external view returns (uint256 fee) {
         require(adapters[aggregatorId] != address(0), "ADAPTER_DOES_NOT_EXIST");
-        return IAdapter(adapters[aggregatorId]).FeePromille();
+        return IAdapter(adapters[aggregatorId]).feePromille();
     }
 
     /**
@@ -99,10 +101,12 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard {
     ) internal {
         address adapter = adapters[aggregatorId];
 
-        tokenFrom.safeTransferFrom(msg.sender, adapter, amountFrom);
+        if (tokenFrom != hbar) {
+            tokenFrom.safeTransferFrom(msg.sender, adapter, amountFrom);
+        }
 
         IAdapter(adapter).swap{value: msg.value}(
-            msg.sender,
+            payable(msg.sender),
             tokenFrom,
             tokenTo,
             amountFrom,

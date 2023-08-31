@@ -9,7 +9,7 @@ module.exports = async ({ exchangeAddress, adapterName, aggregatorId, feePromill
     const adapter = await ethers.getContractAt(adapterName, adapterAddress, wallet);
     await adapter.setFeePromille(feePromille);
 
-    const newFeeRate = await adapter.FeePromille();
+    const newFeeRate = await adapter.feePromille();
 
     return { newFeeRate };
 };

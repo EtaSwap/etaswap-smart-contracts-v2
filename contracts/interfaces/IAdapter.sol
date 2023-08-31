@@ -10,12 +10,12 @@ interface IAdapter {
     function setFeePromille(uint256 _feePromille) external;
 
     function swap(
-        address recipient,
+        address payable recipient,
         IERC20 tokenFrom,
         IERC20 tokenTo,
         uint256 amountFrom,
         uint256 amountTo,
         uint256 deadline,
         bool feeOnTransfer
-    ) external;
+    ) external payable;
 }

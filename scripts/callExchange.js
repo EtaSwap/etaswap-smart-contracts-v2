@@ -3,7 +3,7 @@ const {
   AccountAllowanceApproveTransaction,
   TokenId,
   PrivateKey,
-  ContractId,
+  ContractId, Hbar, HbarUnit
 } = require('@hashgraph/sdk');
 const Long = require('long');
 
@@ -13,13 +13,15 @@ module.exports = async ({ client, clientAccount, exchangeAddress, tokenFrom, tok
   const exchange = await ethers.getContractAt("Exchange", exchangeAddress, wallet);
 
   // Allow from user to swap
-  const amountFromLong = Long.fromString(amountFrom.toString());
-  const allowanceTx = new AccountAllowanceApproveTransaction()
-      .approveTokenAllowance(TokenId.fromSolidityAddress(tokenFrom), clientAccount.id, ContractId.fromSolidityAddress(exchangeAddress), amountFromLong)
-      .freezeWith(client);
-  const allowanceSign = await allowanceTx.sign(PrivateKey.fromString(clientAccount.privateKey));
-  const allowanceSubmit = await allowanceSign.execute(client);
-  await allowanceSubmit.getReceipt(client);
+  if (tokenFrom !== ethers.constants.AddressZero) {
+    const amountFromLong = Long.fromString(amountFrom.toString());
+    const allowanceTx = new AccountAllowanceApproveTransaction()
+        .approveTokenAllowance(TokenId.fromSolidityAddress(tokenFrom), clientAccount.id, ContractId.fromSolidityAddress(exchangeAddress), amountFromLong)
+        .freezeWith(client);
+    const allowanceSign = await allowanceTx.sign(PrivateKey.fromString(clientAccount.privateKey));
+    const allowanceSubmit = await allowanceSign.execute(client);
+    await allowanceSubmit.getReceipt(client);
+  }
 
   const feeData = await ethers.provider.getFeeData();
   //swap transaction
@@ -32,10 +34,14 @@ module.exports = async ({ client, clientAccount, exchangeAddress, tokenFrom, tok
       amountTo,
       deadline,
       feeOnTransfer,
-      { gasLimit: 900000, maxFeePerGas: feeData.gasPrice.mul(103).div(100), maxPriorityFeePerGas: feeData.maxPriorityFeePerGas }
+      {
+        gasLimit: 1000000,
+        maxFeePerGas: feeData.gasPrice.mul(103).div(100),
+        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+        value: tokenFrom === ethers.constants.AddressZero ? ethers.utils.parseUnits(Hbar.fromTinybars(amountFrom.toString()).to(HbarUnit.Hbar).toString()) : 0,
+      }
   );
   await tx.wait();
-  console.log();
   console.log(`Swap ${tokenFrom}/${tokenTo}, on ${aggregatorId}: ${tx.hash}`);
 
   return tx.hash;

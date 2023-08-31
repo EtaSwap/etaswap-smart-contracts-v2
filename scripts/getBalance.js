@@ -24,6 +24,10 @@ module.exports = async ({ userAddress, tokenAddress }) => {
 
     const wallet = (await ethers.getSigners())[0];
 
+    if (tokenAddress === ethers.constants.AddressZero) {
+        return (await ethers.provider.getBalance(userAddress)).div('10000000000');
+    }
+
     const token = await hre.ethers.getContractAt(erc20ABI, tokenAddress, wallet);
     return token.balanceOf(userAddress);
 };

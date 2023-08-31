@@ -4,7 +4,7 @@ const { ORACLES } = require('./constants');
 const { AccountId } = require('@hashgraph/sdk');
 const { ethers } = require('hardhat');
 
-describe("Exchange", function () {
+describe.only("Exchange", function () {
     let adapterAddresses = {};
     let exchangeAddress;
 
@@ -37,6 +37,7 @@ describe("Exchange", function () {
                 contractName: oracle.adapterContract,
                 aggregatorId: oracle.aggregatorId,
                 tokensToAssociate: oracle.tokensToAssociate,
+                whbar: oracle.whbar,
             }))
         });
         exchangeAddress = exchange.contractAddress;
@@ -96,6 +97,65 @@ describe("Exchange", function () {
             });
 
             expect(tokenABalanceAfter).to.be.equal(tokenABalanceBefore.sub(amountFrom));
+            expect(tokenBBalanceAfter).to.be.greaterThan(tokenBBalanceBefore.add(amountTo));
+            expect(tokenBBalanceAfter).to.be.lessThanOrEqual(tokenBBalanceBefore.add(amountFrom.mul(rate).div(hre.ethers.BigNumber.from(10).pow(18)).mul((1 - feeRate) * 1000).div(1000)));
+            expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(amountFrom.mul(feeRate * 1000).div(1000))).abs()).to.be.lessThanOrEqual(100);
+        }
+    });
+
+    it("should be able to exchange exact hbar to tokens", async function () {
+        for (const name of Object.keys(ORACLES)) {
+            const { tokenA, tokenB } = ORACLES[name].validPairHbar;
+            const tokenABalanceBefore = await hre.run('get-balance', {
+                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                tokenAddress: tokenA
+            });
+            const tokenBBalanceBefore = await hre.run('get-balance', {
+                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                tokenAddress: tokenB
+            });
+            const tokenABalanceFeeBefore = await hre.run('get-balance', {
+                userAddress: feeAccount.id.toSolidityAddress(),
+                tokenAddress: tokenA
+            });
+            const slippageTolerance = 0.025;
+            const { rate } = await hre.run('get-rate-oracle', {
+                name,
+                address: ORACLES[name].address,
+                tokenA: tokenA === ethers.constants.AddressZero ? ORACLES[name].whbar : tokenA,
+                tokenB: tokenB === ethers.constants.AddressZero ? ORACLES[name].whbar : tokenB,
+                connector: '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF',
+            });
+
+            const amountFrom = hre.ethers.BigNumber.from(100000000);
+            const amountTo = amountFrom.mul(rate).div(hre.ethers.BigNumber.from(10).pow(18)).mul(1000 - slippageTolerance * 1000 - feeRate * 1000).div(1000);
+
+            await hre.run("call-exchange", {
+                client,
+                clientAccount,
+                exchangeAddress,
+                tokenFrom: tokenA,
+                tokenTo: tokenB,
+                amountFrom,
+                amountTo,
+                aggregatorId: ORACLES[name].aggregatorId,
+                feeOnTransfer: false,
+            });
+
+            const tokenABalanceAfter = await hre.run('get-balance', {
+                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                tokenAddress: tokenA
+            });
+            const tokenBBalanceAfter = await hre.run('get-balance', {
+                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                tokenAddress: tokenB
+            });
+            const tokenABalanceFeeAfter = await hre.run('get-balance', {
+                userAddress: feeAccount.id.toSolidityAddress(),
+                tokenAddress: tokenA
+            });
+
+            expect(tokenABalanceAfter).not.to.be.equal(tokenABalanceBefore);
             expect(tokenBBalanceAfter).to.be.greaterThan(tokenBBalanceBefore.add(amountTo));
             expect(tokenBBalanceAfter).to.be.lessThanOrEqual(tokenBBalanceBefore.add(amountFrom.mul(rate).div(hre.ethers.BigNumber.from(10).pow(18)).mul((1 - feeRate) * 1000).div(1000)));
             expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(amountFrom.mul(feeRate * 1000).div(1000))).abs()).to.be.lessThanOrEqual(100);
@@ -178,7 +238,6 @@ describe("Exchange", function () {
         }
     });
 
-
     it('should be able to pause and unpause swaps by admin', async function () {
         for (const name of Object.keys(ORACLES)) {
             const { tokenA, tokenB } = ORACLES[name].validPair;
@@ -247,4 +306,6 @@ describe("Exchange", function () {
             expect(tokenABalanceAfter).to.be.equal(tokenABalanceBefore.sub(amountFrom));
         }
     });
+
+    //TODO: test not associated destination token
 });

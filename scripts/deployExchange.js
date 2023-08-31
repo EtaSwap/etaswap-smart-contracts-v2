@@ -28,7 +28,7 @@ module.exports = async ({ client, clientAccount, feeAccount, adapters }) => {
     const adapterTx = new ContractCreateFlow()
         .setGas(200000)
         .setAdminKey(client.operatorPublicKey)
-        .setConstructorParameters(new ContractFunctionParameters().addAddress(`0x${feeAccount.id.toSolidityAddress()}`).addAddress(adapterInfo.router).addUint256(5))
+        .setConstructorParameters(new ContractFunctionParameters().addAddress(`0x${feeAccount.id.toSolidityAddress()}`).addAddress(adapterInfo.router).addUint256(5).addAddress(adapterInfo.whbar))
         .setBytecode(Adapter.bytecode);
     const adapterSign = await adapterTx.sign(PrivateKey.fromString(clientAccount.privateKey));
     const adapterSignResponse = await adapterSign.execute(client);
@@ -42,12 +42,17 @@ module.exports = async ({ client, clientAccount, feeAccount, adapters }) => {
         .setAccountId(AccountId.fromSolidityAddress(adapterAddress))
         .freezeWith(client);
     const assocSign = await assocTx.sign(PrivateKey.fromString(clientAccount.privateKey));
-    await assocSign.execute(client);
+    const assocRes = await assocSign.execute(client);
+    console.log(await assocRes.getReceipt(client));
+
     console.log(`${adapterInfo.aggregatorId} adapter associated to ${adapterInfo.tokensToAssociate} tokens.`)
 
+    console.log('----before', adapterInfo.aggregatorId, adapterAddress);
     // Add adapter to exchange
     const exchange = await ethers.getContractAt("Exchange", exchangeAddress, wallet);
+    console.log(exchange);
     await exchange.setAdapter(adapterInfo.aggregatorId, adapterAddress);
+    console.log('----after', adapterInfo.aggregatorId, adapterAddress);
 
     allTokensToAssociate = allTokensToAssociate.concat(adapterInfo.tokensToAssociate);
   }
@@ -60,7 +65,8 @@ module.exports = async ({ client, clientAccount, feeAccount, adapters }) => {
       .setAccountId(AccountId.fromSolidityAddress(exchangeAddress))
       .freezeWith(client);
   const assocExchangeSign = await assocExchangeTx.sign(PrivateKey.fromString(clientAccount.privateKey));
-  await assocExchangeSign.execute(client);
+  const assocExchangeRes = await assocExchangeSign.execute(client);
+  await assocExchangeRes.getReceipt(client);
   console.log(`Exchange associated to all tokens.`)
 
   //Associate fee wallet to all tokens
@@ -69,7 +75,8 @@ module.exports = async ({ client, clientAccount, feeAccount, adapters }) => {
       .setAccountId(feeAccount.id)
       .freezeWith(client);
   const assocFeeSign = await assocFeeTx.sign(feeAccount.privateKey);
-  await assocFeeSign.execute(client);
+  const assocFeeRes = await assocFeeSign.execute(client);
+  await assocFeeRes.getReceipt(client);
   console.log('Fee account associated to all tokens.');
 
   return { contractAddress: exchangeAddress };
