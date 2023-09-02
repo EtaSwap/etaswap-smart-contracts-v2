@@ -3,8 +3,8 @@
 pragma solidity 0.8.19;
 
 library TransferHelper {
-    function safeTransferETH(address to, uint value) internal {
+    function safeTransferETH(address to, uint256 value) internal {
         (bool success,) = to.call{value:value}(new bytes(0));
-        require(success, 'TransferHelper: ETH_TRANSFER_FAILED');
+        require(success, 'EtaSwap: Transfer Helper: ETH_TRANSFER_FAILED');
     }
 }

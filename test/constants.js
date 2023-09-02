@@ -25,27 +25,27 @@ const ORACLES = {
         whbar: '0x000000000000000000000000000000000000e6a2',
         adapterContract: 'SaucerSwapAdapter',
     },
-    PangolinV2Oracle: {
-        factory: '0x0000000000000000000000000000000000070297',
-        validPair: {
-            tokenA: '0x000000000000000000000000000000000002690a',
-            tokenAName: 'WHBAR',
-            tokenB: '0x00000000000000000000000000000000000274a3',
-            tokenBName: 'USDC',
-        },
-        validPairHbar: {
-            tokenA: ethers.constants.AddressZero,
-            tokenAName: 'HBAR',
-            tokenB: '0x0000000000000000000000000000000000070293',
-            tokenBName: 'PBAR',
-        },
-        address: '0x5fae1453f35450E7eBfD1F278DA9cb5ca3DC270b',
-        router: '0x000000000000000000000000000000000007029a',
-        aggregatorId: 'Pangolin',
-        tokensToAssociate: ['0.0.157962', '0.0.160931',  '0.0.459411'],
-        whbar: '0x000000000000000000000000000000000002690a',
-        adapterContract: 'PangolinAdapter',
-    },
+    // PangolinV2Oracle: {
+    //     factory: '0x0000000000000000000000000000000000070297',
+    //     validPair: {
+    //         tokenA: '0x000000000000000000000000000000000002690a',
+    //         tokenAName: 'WHBAR',
+    //         tokenB: '0x00000000000000000000000000000000000274a3',
+    //         tokenBName: 'USDC',
+    //     },
+    //     validPairHbar: {
+    //         tokenA: ethers.constants.AddressZero,
+    //         tokenAName: 'HBAR',
+    //         tokenB: '0x0000000000000000000000000000000000070293',
+    //         tokenBName: 'PBAR',
+    //     },
+    //     address: '0x5fae1453f35450E7eBfD1F278DA9cb5ca3DC270b',
+    //     router: '0x000000000000000000000000000000000007029a',
+    //     aggregatorId: 'Pangolin',
+    //     tokensToAssociate: ['0.0.157962', '0.0.160931',  '0.0.459411'],
+    //     whbar: '0x000000000000000000000000000000000002690a',
+    //     adapterContract: 'PangolinAdapter',
+    // },
 };
 
 module.exports = { ORACLES };

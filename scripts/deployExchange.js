@@ -4,7 +4,7 @@ const {
   Client,
   TokenAssociateTransaction,
   PrivateKey,
-  ContractCreateFlow, AccountId, Hbar, TransferTransaction,
+  ContractCreateFlow, AccountId, Hbar, TransferTransaction, ContractExecuteTransaction,
 } = require('@hashgraph/sdk');
 
 module.exports = async ({ client, clientAccount, feeAccount, adapters }) => {
@@ -26,7 +26,7 @@ module.exports = async ({ client, clientAccount, feeAccount, adapters }) => {
   for (let adapterInfo of adapters) {
     const Adapter = await ethers.getContractFactory(adapterInfo.contractName, wallet);
     const adapterTx = new ContractCreateFlow()
-        .setGas(200000)
+        .setGas(250000)
         .setAdminKey(client.operatorPublicKey)
         .setConstructorParameters(new ContractFunctionParameters().addAddress(`0x${feeAccount.id.toSolidityAddress()}`).addAddress(adapterInfo.router).addUint256(5).addAddress(adapterInfo.whbar))
         .setBytecode(Adapter.bytecode);
@@ -43,16 +43,10 @@ module.exports = async ({ client, clientAccount, feeAccount, adapters }) => {
         .freezeWith(client);
     const assocSign = await assocTx.sign(PrivateKey.fromString(clientAccount.privateKey));
     const assocRes = await assocSign.execute(client);
-    console.log(await assocRes.getReceipt(client));
+    const assocReceipt = await assocRes.getReceipt(client);
 
-    console.log(`${adapterInfo.aggregatorId} adapter associated to ${adapterInfo.tokensToAssociate} tokens.`)
-
-    console.log('----before', adapterInfo.aggregatorId, adapterAddress);
-    // Add adapter to exchange
     const exchange = await ethers.getContractAt("Exchange", exchangeAddress, wallet);
-    console.log(exchange);
-    await exchange.setAdapter(adapterInfo.aggregatorId, adapterAddress);
-    console.log('----after', adapterInfo.aggregatorId, adapterAddress);
+    await exchange.setAdapter(adapterInfo.aggregatorId, adapterAddress, );
 
     allTokensToAssociate = allTokensToAssociate.concat(adapterInfo.tokensToAssociate);
   }

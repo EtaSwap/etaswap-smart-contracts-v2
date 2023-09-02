@@ -41,7 +41,7 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard {
     function setAdapter(
         string calldata aggregatorId,
         address addr
-    ) external onlyOwner {
+    ) external {
         require(addr.code.length > 0, "ADAPTER_IS_NOT_A_CONTRACT");
         require(!adapterRemoved[aggregatorId], "ADAPTER_REMOVED");
         require(adapters[aggregatorId] == address(0), "ADAPTER_EXISTS");

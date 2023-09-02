@@ -70,7 +70,7 @@ contract SaucerSwapAdapter is Ownable, IAdapter {
                     address(this),
                     deadline
                 );
-                uint256 change = msg.value - amounts[0];
+                uint256 change = msg.value - fee - amounts[0];
                 _transfer(tokenFrom, change, recipient);
                 tokenToReturn = amounts[1];
             } else if (tokenTo == hbar) {
@@ -150,8 +150,7 @@ contract SaucerSwapAdapter is Ownable, IAdapter {
     ) internal {
         if (amount > 0) {
             if (token == hbar) {
-                //TODO: check only success response code https://github.com/saucerswaplabs/saucerswaplabs-core/blob/master/contracts/hedera/HederaResponseCodes.sol
-                require(recipient.send(amount), "Failed to send Hbar");
+                TransferHelper.safeTransferETH(recipient, amount);
             } else {
                 token.safeTransfer(recipient, amount);
             }
@@ -176,4 +175,8 @@ contract SaucerSwapAdapter is Ownable, IAdapter {
             token.approve(spender, amount);
         }
     }
+
+    receive() external payable {}
+
+    fallback() external payable {}
 }
