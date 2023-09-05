@@ -38,7 +38,6 @@ describe("Oracles", function () {
         address: oracleAddresses[name],
         tokenA,
         tokenB,
-        connector: '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF',
       });
       console.log(`Rate ${name} ${tokenAName}/${tokenBName}: ${rate}`);
       expect(rate).to.be.greaterThan(hre.ethers.BigNumber.from(0));
@@ -53,14 +52,12 @@ describe("Oracles", function () {
         address: oracleAddresses[name],
         tokenA,
         tokenB,
-        connector: '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF',
       });
       const { rate: rateReverse } = await hre.run('get-rate-oracle', {
         name,
         address: oracleAddresses[name],
         tokenA: tokenB,
         tokenB: tokenA,
-        connector: '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF',
       });
 
       expect(rate).to.be.greaterThan(hre.ethers.BigNumber.from(0));

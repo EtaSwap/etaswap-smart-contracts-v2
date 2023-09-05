@@ -28,7 +28,14 @@ module.exports = async ({ client, clientAccount, feeAccount, adapters }) => {
     const adapterTx = new ContractCreateFlow()
         .setGas(250000)
         .setAdminKey(client.operatorPublicKey)
-        .setConstructorParameters(new ContractFunctionParameters().addAddress(`0x${feeAccount.id.toSolidityAddress()}`).addAddress(adapterInfo.router).addUint256(5).addAddress(adapterInfo.whbar))
+        .setConstructorParameters(
+            new ContractFunctionParameters()
+                .addAddress(`0x${feeAccount.id.toSolidityAddress()}`)
+                .addAddress(adapterInfo.router)
+                .addUint256(5)
+                .addAddress(adapterInfo.whbarToken)
+                .addAddress(adapterInfo.whbarContract)
+        )
         .setBytecode(Adapter.bytecode);
     const adapterSign = await adapterTx.sign(PrivateKey.fromString(clientAccount.privateKey));
     const adapterSignResponse = await adapterSign.execute(client);

@@ -4,7 +4,16 @@ const { ORACLES } = require('./constants');
 const { AccountId } = require('@hashgraph/sdk');
 const { ethers } = require('hardhat');
 
-describe.only("Exchange", function () {
+const GAS_LIMITS = {
+    exactTokenToToken: 900000, //877969    875079
+    exactHBARToToken: 245000, //221207     203366
+    exactTokenToHBAR: 1670000, //1629306   1623679
+    tokenToExactToken: 920000, //894071    891182
+    HBARToExactToken: 235000, //211040     218135
+    tokenToExactHBAR: 1690000, //1645353   1639941
+}
+
+describe("Exchange", function () {
     let adapterAddresses = {};
     let exchangeAddress;
 
@@ -37,7 +46,8 @@ describe.only("Exchange", function () {
                 contractName: oracle.adapterContract,
                 aggregatorId: oracle.aggregatorId,
                 tokensToAssociate: oracle.tokensToAssociate,
-                whbar: oracle.whbar,
+                whbarToken: oracle.whbarToken,
+                whbarContract: oracle.whbarContract,
             }))
         });
         exchangeAddress = exchange.contractAddress;
@@ -65,7 +75,6 @@ describe.only("Exchange", function () {
                 address: ORACLES[name].address,
                 tokenA,
                 tokenB,
-                connector: '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF',
             });
 
             const amountFrom = hre.ethers.BigNumber.from(100000000);
@@ -81,6 +90,7 @@ describe.only("Exchange", function () {
                 amountTo,
                 aggregatorId: ORACLES[name].aggregatorId,
                 feeOnTransfer: false,
+                gasLimit: GAS_LIMITS.exactTokenToToken,
             });
 
             const tokenABalanceAfter = await hre.run('get-balance', {
@@ -122,9 +132,8 @@ describe.only("Exchange", function () {
             const { rate } = await hre.run('get-rate-oracle', {
                 name,
                 address: ORACLES[name].address,
-                tokenA: tokenA === ethers.constants.AddressZero ? ORACLES[name].whbar : tokenA,
-                tokenB: tokenB === ethers.constants.AddressZero ? ORACLES[name].whbar : tokenB,
-                connector: '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF',
+                tokenA: tokenA === ethers.constants.AddressZero ? ORACLES[name].whbarToken : tokenA,
+                tokenB: tokenB === ethers.constants.AddressZero ? ORACLES[name].whbarToken : tokenB,
             });
 
             const amountFrom = hre.ethers.BigNumber.from(100000000);
@@ -140,6 +149,7 @@ describe.only("Exchange", function () {
                 amountTo,
                 aggregatorId: ORACLES[name].aggregatorId,
                 feeOnTransfer: false,
+                gasLimit: GAS_LIMITS.exactHBARToToken,
             });
 
             const tokenABalanceAfter = await hre.run('get-balance', {
@@ -181,9 +191,8 @@ describe.only("Exchange", function () {
             const { rate } = await hre.run('get-rate-oracle', {
                 name,
                 address: ORACLES[name].address,
-                tokenA: tokenB === ethers.constants.AddressZero ? ORACLES[name].whbar : tokenB,
-                tokenB: tokenA === ethers.constants.AddressZero ? ORACLES[name].whbar : tokenA,
-                connector: '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF',
+                tokenA: tokenB === ethers.constants.AddressZero ? ORACLES[name].whbarToken : tokenB,
+                tokenB: tokenA === ethers.constants.AddressZero ? ORACLES[name].whbarToken : tokenA,
             });
 
             const amountFrom = hre.ethers.BigNumber.from(100000);
@@ -199,6 +208,7 @@ describe.only("Exchange", function () {
                 amountTo,
                 aggregatorId: ORACLES[name].aggregatorId,
                 feeOnTransfer: false,
+                gasLimit: GAS_LIMITS.exactTokenToHBAR,
             });
 
             const tokenABalanceAfter = await hre.run('get-balance', {
@@ -259,7 +269,6 @@ describe.only("Exchange", function () {
                 address: ORACLES[name].address,
                 tokenA: tokenB,
                 tokenB: tokenA,
-                connector: '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF',
             });
 
             const amountTo = hre.ethers.BigNumber.from(100000);
@@ -275,6 +284,7 @@ describe.only("Exchange", function () {
                 amountTo,
                 aggregatorId: ORACLES[name].aggregatorId,
                 feeOnTransfer: true,
+                gasLimit: GAS_LIMITS.tokenToExactToken,
             });
 
 
@@ -317,9 +327,8 @@ describe.only("Exchange", function () {
             const { rate } = await hre.run('get-rate-oracle', {
                 name,
                 address: ORACLES[name].address,
-                tokenA: tokenB === ethers.constants.AddressZero ? ORACLES[name].whbar : tokenB,
-                tokenB: tokenA === ethers.constants.AddressZero ? ORACLES[name].whbar : tokenA,
-                connector: '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF',
+                tokenA: tokenB === ethers.constants.AddressZero ? ORACLES[name].whbarToken : tokenB,
+                tokenB: tokenA === ethers.constants.AddressZero ? ORACLES[name].whbarToken : tokenA,
             });
 
             const amountTo = hre.ethers.BigNumber.from(1000000);
@@ -335,6 +344,7 @@ describe.only("Exchange", function () {
                 amountTo,
                 aggregatorId: ORACLES[name].aggregatorId,
                 feeOnTransfer: true,
+                gasLimit: GAS_LIMITS.HBARToExactToken,
             });
 
 
@@ -376,9 +386,8 @@ describe.only("Exchange", function () {
             const { rate } = await hre.run('get-rate-oracle', {
                 name,
                 address: ORACLES[name].address,
-                tokenA: tokenA === ethers.constants.AddressZero ? ORACLES[name].whbar : tokenA,
-                tokenB: tokenB === ethers.constants.AddressZero ? ORACLES[name].whbar : tokenB,
-                connector: '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF',
+                tokenA: tokenA === ethers.constants.AddressZero ? ORACLES[name].whbarToken : tokenA,
+                tokenB: tokenB === ethers.constants.AddressZero ? ORACLES[name].whbarToken : tokenB,
             });
 
             const amountTo = hre.ethers.BigNumber.from(100000000);
@@ -394,6 +403,7 @@ describe.only("Exchange", function () {
                 amountTo,
                 aggregatorId: ORACLES[name].aggregatorId,
                 feeOnTransfer: true,
+                gasLimit: GAS_LIMITS.tokenToExactHBAR,
             });
 
 
@@ -434,7 +444,6 @@ describe.only("Exchange", function () {
                 address: ORACLES[name].address,
                 tokenA,
                 tokenB,
-                connector: '0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF',
             });
 
             const amountFrom = hre.ethers.BigNumber.from(100000000);
@@ -451,6 +460,7 @@ describe.only("Exchange", function () {
                     amountTo,
                     aggregatorId: ORACLES[name].aggregatorId,
                     feeOnTransfer: false,
+                    gasLimit: GAS_LIMITS.exactTokenToToken,
                 });
                 expect(true).to.be.equal(false);
             } catch (err) {
@@ -476,6 +486,7 @@ describe.only("Exchange", function () {
                 amountTo,
                 aggregatorId: ORACLES[name].aggregatorId,
                 feeOnTransfer: false,
+                gasLimit: GAS_LIMITS.exactTokenToToken,
             });
 
             const tokenABalanceAfter = await hre.run('get-balance', {

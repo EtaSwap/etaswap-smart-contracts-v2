@@ -3,7 +3,7 @@ const {
     AccountAllowanceApproveTransaction,
     TokenId,
     PrivateKey,
-    ContractId, Hbar, HbarUnit, ContractExecuteTransaction, ContractFunctionParameters
+    ContractId, Hbar, HbarUnit,
 } = require('@hashgraph/sdk');
 const Long = require('long');
 
@@ -16,7 +16,8 @@ module.exports = async ({
                             amountFrom,
                             amountTo,
                             aggregatorId,
-                            feeOnTransfer
+                            feeOnTransfer,
+                            gasLimit,
                         }) => {
     const wallet = (await ethers.getSigners())[0];
 
@@ -33,7 +34,6 @@ module.exports = async ({
         await allowanceSubmit.getReceipt(client);
     }
 
-    const feeData = await ethers.provider.getFeeData();
     //swap transaction
     const deadline = Math.floor(Date.now() / 1000) + 1000;
     const tx = await exchange.swap(
@@ -45,9 +45,7 @@ module.exports = async ({
         deadline,
         feeOnTransfer,
         {
-          gasLimit: 2000000,
-          maxFeePerGas: feeData.gasPrice.mul(103).div(100),
-          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+          gasLimit,
           value: tokenFrom === ethers.constants.AddressZero ? ethers.utils.parseUnits(Hbar.fromTinybars(amountFrom.toString()).to(HbarUnit.Hbar).toString()) : 0,
         }
     );

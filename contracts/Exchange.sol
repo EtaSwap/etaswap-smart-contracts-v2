@@ -50,7 +50,7 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard {
         emit AdapterSet(aggregatorId, addr);
     }
 
-    function adapterFee(string calldata aggregatorId) external view returns (uint256 fee) {
+    function adapterFee(string calldata aggregatorId) external view returns (uint8 fee) {
         require(adapters[aggregatorId] != address(0), "ADAPTER_DOES_NOT_EXIST");
         return IAdapter(adapters[aggregatorId]).feePromille();
     }
