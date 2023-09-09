@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const { expect } = require("chai");
 const { ORACLES } = require('./constants');
 
-describe("Oracles", function () {
+describe.only("Oracles", function () {
   let oracleAddresses = {};
 
   let client;
@@ -24,7 +24,10 @@ describe("Oracles", function () {
 
   it('Should be able to deploy oracles', async function () {
     for (const name of Object.keys(ORACLES)) {
-      const deploy = await hre.run('deploy-oracle', { name, factory: ORACLES[name].factory });
+      const deploy = await hre.run('deploy-oracle', {
+        name,
+        factory: ORACLES[name].factory,
+      });
       oracleAddresses[name] = deploy.contractAddress;
       expect(oracleAddresses[name]).not.to.equal(hre.ethers.constants.AddressZero);
     }

@@ -1,7 +1,7 @@
 const { ethers } = require('hardhat');
 
 const ORACLES = {
-    SaucerSwapV2Oracle: {
+    SaucerSwapOracle: {
         factory: '0x000000000000000000000000000000000000e0c9',
         validPair: {
             tokenA: '0x000000000000000000000000000000000000e6a2',
@@ -17,7 +17,7 @@ const ORACLES = {
         },
         address: '0xbBF03c93378F6FeeF479F9912542f98A5dF04401',
         router: '0x000000000000000000000000000000000000e8df',
-        aggregatorId: 'SaucerSwapV2',
+        aggregatorId: 'SaucerSwap',
         tokensToAssociate: [
             '0.0.58850', '0.0.59042', '0.0.61266', '0.0.117947', '0.0.143056',
             '0.0.143063', '0.0.447892', '0.0.447893', '0.0.447894', '0.0.447895'
@@ -26,7 +26,7 @@ const ORACLES = {
         whbarContract: '0x000000000000000000000000000000000000e6a1',
         adapterContract: 'SaucerSwapAdapter',
     },
-    PangolinV2Oracle: {
+    PangolinOracle: {
         factory: '0x0000000000000000000000000000000000070297',
         validPair: {
             tokenA: '0x000000000000000000000000000000000002690a',
@@ -49,5 +49,35 @@ const ORACLES = {
         adapterContract: 'PangolinAdapter',
     },
 };
+
+// const ORACLES = {
+//     SaucerSwapOracle: {
+//         factory: '0x0000000000000000000000000000000000103780',
+//         validPair: {
+//             tokenA: '0x0000000000000000000000000000000000163b5a',
+//             tokenAName: 'WHBAR',
+//             tokenB: '0x000000000000000000000000000000000006f89a',
+//             tokenBName: 'USDC',
+//         },
+//     },
+//     PangolinOracle: {
+//         factory: '0x00000000000000000000000000000000001a88bc',
+//         validPair: {
+//             tokenA: '0x00000000000000000000000000000000001A8837',
+//             tokenAName: 'WHBAR',
+//             tokenB: '0x0000000000000000000000000000000000101Ae3',
+//             tokenBName: 'USDC[hts]',
+//         },
+//     },
+//     HeliSwapOracle: {
+//         factory: '0x0000000000000000000000000000000000134224',
+//         validPair: {
+//             tokenA: '0x00000000000000000000000000000000002cc823',
+//             tokenAName: 'WHBAR',
+//             tokenB: '0x000000000000000000000000000000000006f89a',
+//             tokenBName: 'USDC',
+//         },
+//     },
+// };
 
 module.exports = { ORACLES };

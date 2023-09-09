@@ -4,18 +4,17 @@ pragma solidity 0.8.19;
 
 import "./OracleBase.sol";
 import "../interfaces/IUniswapV2Pair.sol";
-import "../interfaces/IUniswapV2Factory.sol";
+import "../interfaces/IPangolinV2Factory.sol";
 
-contract SaucerSwapV2Oracle is OracleBase {
+contract PangolinOracle is OracleBase {
     address public immutable factory;
-    IERC20 private constant _NONE = IERC20(0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF);
 
     constructor(address _factory) {
         factory = _factory;
     }
 
     function _pairFor(IERC20 tokenA, IERC20 tokenB) private view returns (address pair) {
-        pair = address(IUniswapV2Factory(factory).getPair(address(tokenA), address(tokenB)));
+        pair = address(IPangolinV2Factory(factory).getPairContract(address(tokenA), address(tokenB)));
     }
 
     function _getBalances(IERC20 srcToken, IERC20 dstToken) internal view override returns (uint256 srcBalance, uint256 dstBalance) {

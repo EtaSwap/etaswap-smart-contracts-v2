@@ -64,7 +64,7 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 500,
+        runs: 1000,
       },
     },
   },
@@ -72,13 +72,16 @@ module.exports = {
   defaultNetwork: "testnet",
   networks: {
     testnet: {
-      //HashIO testnet endpoint from the TESTNET_ENDPOINT variable in the project .env the file
       url: process.env.TESTNET_ENDPOINT,
-      //the Hedera testnet account ECDSA private
-      //the public address for the account is derived from the private key
       accounts: [
         process.env.TESTNET_OPERATOR_PRIVATE_KEY_HEX,
       ],
     },
+    mainnet: {
+      url: process.env.MAINNET_ENDPOINT,
+      accounts: [
+        process.env.MAINNET_OPERATOR_PRIVATE_KEY_HEX,
+      ],
+    }
   },
 };
