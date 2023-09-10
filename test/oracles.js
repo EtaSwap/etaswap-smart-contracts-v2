@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const { expect } = require("chai");
 const { ORACLES } = require('./constants');
 
-describe.only("Oracles", function () {
+describe("Oracles", function () {
   let oracleAddresses = {};
 
   let client;

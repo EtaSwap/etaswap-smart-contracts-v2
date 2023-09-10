@@ -1,7 +1,7 @@
 const { Client, AccountBalanceQuery, PrivateKey, AccountCreateTransaction, Hbar,
     AccountAllowanceApproveTransaction,
     TokenId,
-    ContractId,
+    ContractId, AccountUpdateTransaction, AccountId,
 } = require("@hashgraph/sdk");
 require("dotenv").config();
 const hre = require("hardhat");
@@ -26,6 +26,7 @@ const init = async () => {
     const publicKey = privateKey.publicKey;
     const account = await new AccountCreateTransaction()
         .setKey(publicKey)
+        .setMaxAutomaticTokenAssociations(10)
         .execute(client);
     const { accountId } = await account.getReceipt(client);
 

@@ -11,7 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "@hashgraph/hedera-local": "^2.4.5",
-    "@hashgraph/sdk": "^2.31.0",
+    "@hashgraph/sdk": "^2.33.0",
     "@nomicfoundation/hardhat-toolbox": "^2.0.1",
     "@openzeppelin/contracts": "4.9.0",
     "dotenv": "^16.0.3"

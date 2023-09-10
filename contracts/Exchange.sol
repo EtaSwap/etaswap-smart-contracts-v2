@@ -11,11 +11,12 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./interfaces/IAdapter.sol";
+import "./interfaces/IExchange.sol";
 
 /**
  * @title Exchange
  */
-contract Exchange is Ownable, Pausable, ReentrancyGuard {
+contract Exchange is Ownable, Pausable, ReentrancyGuard, IExchange {
     IERC20 private constant hbar = IERC20(0x0000000000000000000000000000000000000000);
 
     using SafeERC20 for IERC20;
@@ -42,16 +43,16 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard {
         string calldata aggregatorId,
         address addr
     ) external {
-        require(addr.code.length > 0, "ADAPTER_IS_NOT_A_CONTRACT");
-        require(!adapterRemoved[aggregatorId], "ADAPTER_REMOVED");
-        require(adapters[aggregatorId] == address(0), "ADAPTER_EXISTS");
+        require(addr.code.length > 0, "EtaSwap: ADAPTER_NOT_A_CONTRACT");
+        require(!adapterRemoved[aggregatorId], "EtaSwap: ADAPTER_REMOVED");
+        require(adapters[aggregatorId] == address(0), "EtaSwap: ADAPTER_EXISTS");
 
         adapters[aggregatorId] = addr;
         emit AdapterSet(aggregatorId, addr);
     }
 
     function adapterFee(string calldata aggregatorId) external view returns (uint8 fee) {
-        require(adapters[aggregatorId] != address(0), "ADAPTER_DOES_NOT_EXIST");
+        require(adapters[aggregatorId] != address(0), "EtaSwap: ADAPTER_DOES_NOT_EXIST");
         return IAdapter(adapters[aggregatorId]).feePromille();
     }
 
@@ -60,7 +61,7 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard {
      * @param aggregatorId Aggregator's identifier
      */
     function removeAdapter(string calldata aggregatorId) external onlyOwner {
-        require(adapters[aggregatorId] != address(0), "ADAPTER_DOES_NOT_EXIST");
+        require(adapters[aggregatorId] != address(0), "EtaSwap: ADAPTER_DOES_NOT_EXIST");
         delete adapters[aggregatorId];
         adapterRemoved[aggregatorId] = true;
         emit AdapterRemoved(aggregatorId);
@@ -79,6 +80,7 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard {
         uint256 deadline,
         bool feeOnTransfer
     ) external payable whenNotPaused nonReentrant {
+        require(adapters[aggregatorId] != address(0), "EtaSwap: ADAPTER_DOES_NOT_EXIST");
         _swap(aggregatorId, tokenFrom, tokenTo, amountFrom, amountTo, deadline, feeOnTransfer);
     }
 
