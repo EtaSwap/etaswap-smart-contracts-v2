@@ -1,0 +1,80 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "IAdapter",
+  "sourceName": "contracts/interfaces/IAdapter.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "feePromille",
+      "outputs": [
+        {
+          "internalType": "uint8",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint8",
+          "name": "_feePromille",
+          "type": "uint8"
+        }
+      ],
+      "name": "setFeePromille",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address payable",
+          "name": "recipient",
+          "type": "address"
+        },
+        {
+          "internalType": "contract IERC20",
+          "name": "tokenFrom",
+          "type": "address"
+        },
+        {
+          "internalType": "contract IERC20",
+          "name": "tokenTo",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amountFrom",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amountTo",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "deadline",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "feeOnTransfer",
+          "type": "bool"
+        }
+      ],
+      "name": "swap",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

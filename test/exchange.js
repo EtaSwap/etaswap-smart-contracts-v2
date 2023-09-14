@@ -54,7 +54,6 @@ describe("Exchange", function () {
         expect(exchangeAddress).not.to.equal(hre.ethers.constants.AddressZero);
     });
 
-    /*
     it("should be able to exchange exact tokens to tokens", async function () {
         for (const name of Object.keys(ORACLES)) {
             const { tokenA, tokenB } = ORACLES[name].validPair;
@@ -497,5 +496,5 @@ describe("Exchange", function () {
 
             expect(tokenABalanceAfter).to.be.equal(tokenABalanceBefore.sub(amountFrom));
         }
-    });*/
+    });
 });

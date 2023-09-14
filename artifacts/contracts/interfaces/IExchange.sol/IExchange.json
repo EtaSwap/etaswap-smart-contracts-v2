@@ -1,0 +1,104 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "IExchange",
+  "sourceName": "contracts/interfaces/IExchange.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "aggregatorId",
+          "type": "string"
+        }
+      ],
+      "name": "adapterFee",
+      "outputs": [
+        {
+          "internalType": "uint8",
+          "name": "fee",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "aggregatorId",
+          "type": "string"
+        }
+      ],
+      "name": "removeAdapter",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "aggregatorId",
+          "type": "string"
+        },
+        {
+          "internalType": "address",
+          "name": "addr",
+          "type": "address"
+        }
+      ],
+      "name": "setAdapter",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "aggregatorId",
+          "type": "string"
+        },
+        {
+          "internalType": "contract IERC20",
+          "name": "tokenFrom",
+          "type": "address"
+        },
+        {
+          "internalType": "contract IERC20",
+          "name": "tokenTo",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amountFrom",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amountTo",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "deadline",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "feeOnTransfer",
+          "type": "bool"
+        }
+      ],
+      "name": "swap",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
