@@ -7,23 +7,23 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../interfaces/IPangolinRouter.sol";
+import "../interfaces/IUniswapV3Router.sol";
 import "../interfaces/IAdapter.sol";
 import "../interfaces/IWHBAR.sol";
 
-contract PangolinAdapter is Ownable, IAdapter {
+contract SaucerSwapV2Adapter is Ownable, IAdapter {
     using SafeERC20 for IERC20;
     using Address for address;
     using Address for address payable;
 
-    IPangolinRouter public immutable router;
+    IUniswapV3Router public immutable router;
     address payable public immutable feeWallet;
     uint8 public feePromille;
     IERC20 private constant hbar = IERC20(0x0000000000000000000000000000000000000000);
     IERC20 public whbarToken;
     IWHBAR public whbarContract;
 
-    constructor(address payable _feeWallet, IPangolinRouter _router, uint8 _feePromille, IERC20 _whbarToken, IWHBAR _whbarContract) public {
+    constructor(address payable _feeWallet, IUniswapV3Router _router, uint8 _feePromille, IERC20 _whbarToken, IWHBAR _whbarContract) public {
         feeWallet = _feeWallet;
         router = _router;
         feePromille = _feePromille;
@@ -39,7 +39,7 @@ contract PangolinAdapter is Ownable, IAdapter {
      * @dev Performs a swap
      * @param recipient The original msg.sender performing the swap
      * @param tokenFrom Token to be swapped
-     * @param pathEncode Tokens to be swapped in format [IERC20 tokenFrom, IERC20 tokenTo]
+     * @param pathEncode Tokens to be swapped in format [IERC20 tokenTo, bytes3 fee, IERC20 tokenIntermediate, bytes3 fee, IERC20 tokenFrom]
      * @param amountFrom Amount of tokenFrom to swap
      * @param amountTo Minimum amount of tokenTo to receive
      * @param deadline Timestamp at which the swap becomes invalid. Used by Uniswap
@@ -53,92 +53,45 @@ contract PangolinAdapter is Ownable, IAdapter {
         uint256 deadline,
         bool feeOnTransfer
     ) external payable {
-        (, IERC20 tokenTo) = abi.decode(pathEncode, (IERC20, IERC20));
+        (IERC20 tokenTo) = abi.decode(pathEncode, (IERC20));
         require(tokenFrom != tokenTo, "EtaSwap: TOKEN_PAIR_INVALID");
 
         uint256 fee = (tokenFrom == hbar ? msg.value : amountFrom) * feePromille / 1000;
         _transfer(tokenFrom, fee, feeWallet);
 
-        address[] memory path = new address[](2);
-        path[0] = address(tokenFrom == hbar ? whbarToken : tokenFrom);
-        path[1] = address(tokenTo == hbar ? whbarToken : tokenTo);
-
         uint256 amountFromWithoutFee = (tokenFrom == hbar ? msg.value : amountFrom) - fee;
 
         if (feeOnTransfer) {
+            uint256 amountSpent = 0;
+            IUniswapV3Router.ExactOutputParams memory routerInput = IUniswapV3Router.ExactOutputParams({
+                path: pathEncode,
+                recipient: address(this),
+                deadline: deadline,
+                amountOut: amountTo,
+                amountInMaximum: amountFromWithoutFee
+            });
             if (tokenFrom == hbar) {
-                uint[] memory amounts = router.swapAVAXForExactTokens{value: amountFromWithoutFee}(
-                    amountTo,
-                    path,
-                    address(this),
-                    deadline
-                );
-                _transfer(tokenTo, amounts[1], recipient);
-                _transfer(tokenFrom, amountFromWithoutFee - amounts[0], recipient);
-            } else if (tokenTo == hbar) {
-                // There is bug in pangolin DEX with allowance with function swapTokensForExactAVAX,
-                // so we need to do it in 2 steps:
-                // 1) swap token to WHBAR
-                // 2) burn WHBAR and return to user
-                _approveSpender(tokenFrom, address(router), amountFromWithoutFee);
-                uint[] memory amounts = router.swapTokensForExactTokens(
-                    amountTo,
-                    amountFromWithoutFee,
-                    path,
-                    address(this),
-                    deadline
-                );
-
-                _approveSpender(whbarToken, address(whbarContract), amounts[1]);
-                whbarContract.withdraw(amounts[1]);
-                _transfer(tokenTo, amounts[1], recipient);
-                _transfer(tokenFrom, amountFromWithoutFee - amounts[0], recipient);
+                amountSpent = router.exactOutput{value: amountFromWithoutFee}(routerInput);
             } else {
                 _approveSpender(tokenFrom, address(router), amountFromWithoutFee);
-                uint[] memory amounts = router.swapTokensForExactTokens(
-                    amountTo,
-                    amountFromWithoutFee,
-                    path,
-                    address(this),
-                    deadline
-                );
-                _transfer(tokenTo, amounts[1], recipient);
-                _transfer(tokenFrom, amountFromWithoutFee - amounts[0], recipient);
+                amountSpent = router.exactOutput(routerInput);
             }
+            _transfer(tokenTo, amountTo, recipient);
+            _transfer(tokenFrom, amountFromWithoutFee - amountSpent, recipient);
         } else {
             uint256 amountToReturn = 0;
+            IUniswapV3Router.ExactInputParams memory routerInput = IUniswapV3Router.ExactInputParams({
+                path: pathEncode,
+                recipient: address(this),
+                deadline: deadline,
+                amountIn: amountFromWithoutFee,
+                amountOutMinimum: amountTo
+            });
             if (tokenFrom == hbar) {
-                amountToReturn = router.swapExactAVAXForTokens{value: amountFromWithoutFee}(
-                    amountTo,
-                    path,
-                    address(this),
-                    deadline
-                )[1];
-            } else if (tokenTo == hbar) {
-                // There is bug in pangolin DEX with allowance with function swapExactTokensForAVAX,
-                // so we need to do it in 2 steps:
-                // 1) swap token to WHBAR
-                // 2) burn WHBAR and return to user
-                _approveSpender(tokenFrom, address(router), amountFromWithoutFee);
-                amountToReturn = router.swapExactTokensForTokens(
-                    amountFromWithoutFee,
-                    amountTo,
-                    path,
-                    address(this),
-                    deadline
-                )[1];
-
-                _approveSpender(whbarToken, address(whbarContract), amountToReturn);
-                whbarContract.withdraw(amountToReturn);
+                amountToReturn = router.exactInput{value: amountFromWithoutFee}(routerInput);
             } else {
                 _approveSpender(tokenFrom, address(router), amountFromWithoutFee);
-                amountToReturn = router.swapExactTokensForTokens(
-                    amountFromWithoutFee,
-                    amountTo,
-                    path,
-                    address(this),
-                    deadline
-                )[1];
+                amountToReturn = router.exactInput(routerInput);
             }
             _transfer(tokenTo, amountToReturn, recipient);
         }

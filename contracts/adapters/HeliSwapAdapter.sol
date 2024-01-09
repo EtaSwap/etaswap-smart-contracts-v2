@@ -39,7 +39,7 @@ contract HeliSwapAdapter is Ownable, IAdapter {
      * @dev Performs a swap
      * @param recipient The original msg.sender performing the swap
      * @param tokenFrom Token to be swapped
-     * @param tokenTo Token to be received
+     * @param pathEncode Tokens to be swapped in format [IERC20 tokenFrom, IERC20 tokenTo]
      * @param amountFrom Amount of tokenFrom to swap
      * @param amountTo Minimum amount of tokenTo to receive
      * @param deadline Timestamp at which the swap becomes invalid. Used by Uniswap
@@ -47,12 +47,13 @@ contract HeliSwapAdapter is Ownable, IAdapter {
     function swap(
         address payable recipient,
         IERC20 tokenFrom,
-        IERC20 tokenTo,
+        bytes calldata pathEncode,
         uint256 amountFrom,
         uint256 amountTo,
         uint256 deadline,
         bool feeOnTransfer
     ) external payable {
+        (, IERC20 tokenTo) = abi.decode(pathEncode, (IERC20, IERC20));
         require(tokenFrom != tokenTo, "EtaSwap: TOKEN_PAIR_INVALID");
 
         uint256 fee = (tokenFrom == hbar ? msg.value : amountFrom) * feePromille / 1000;

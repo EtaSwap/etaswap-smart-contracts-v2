@@ -66,9 +66,9 @@
           "type": "address"
         },
         {
-          "internalType": "contract IERC20",
-          "name": "tokenTo",
-          "type": "address"
+          "internalType": "bytes",
+          "name": "pathEncode",
+          "type": "bytes"
         },
         {
           "internalType": "uint256",

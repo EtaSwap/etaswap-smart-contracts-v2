@@ -12,7 +12,7 @@ interface IExchange {
     function swap(
         string calldata aggregatorId,
         IERC20 tokenFrom,
-        IERC20 tokenTo,
+        bytes calldata pathEncode,
         uint256 amountFrom,
         uint256 amountTo,
         uint256 deadline,

@@ -5,15 +5,15 @@ const { AccountId } = require('@hashgraph/sdk');
 const { ethers } = require('hardhat');
 
 const GAS_LIMITS = {
-    exactTokenToToken: 900000, //877969    875079
-    exactHBARToToken: 247000, //221207     203366
-    exactTokenToHBAR: 1670000, //1629306   1623679
-    tokenToExactToken: 920000, //894071    891182
-    HBARToExactToken: 240000, //211040     218135
+    exactTokenToToken: 970000, //877969    875079
+    exactHBARToToken: 260000, //221207     203366
+    exactTokenToHBAR: 1690000, //1629306   1623679
+    tokenToExactToken: 970000, //894071    891182
+    HBARToExactToken: 260000, //211040     218135
     tokenToExactHBAR: 1690000, //1645353   1639941
 }
 
-describe("Exchange", function () {
+describe.only("Exchange", function () {
     let adapterAddresses = {};
     let exchangeAddress;
 

@@ -12,7 +12,7 @@ interface IAdapter {
     function swap(
         address payable recipient,
         IERC20 tokenFrom,
-        IERC20 tokenTo,
+        bytes calldata pathEncode,
         uint256 amountFrom,
         uint256 amountTo,
         uint256 deadline,

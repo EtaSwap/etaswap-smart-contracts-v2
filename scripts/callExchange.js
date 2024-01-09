@@ -34,12 +34,13 @@ module.exports = async ({
         await allowanceSubmit.getReceipt(client);
     }
 
+    const poolFee = 500;
     //swap transaction
     const deadline = Math.floor(Date.now() / 1000) + 1000;
     const tx = await exchange.swap(
         aggregatorId,
         tokenFrom,
-        tokenTo,
+        ethers.utils.defaultAbiCoder.encode(['address', 'address', 'bytes3'], [tokenFrom, tokenTo, '0x' + poolFee.toString(16).padStart(6, '0')]),
         amountFrom,
         amountTo,
         deadline,

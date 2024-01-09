@@ -74,14 +74,14 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard, IExchange {
     function swap(
         string calldata aggregatorId,
         IERC20 tokenFrom,
-        IERC20 tokenTo,
+        bytes calldata pathEncode,
         uint256 amountFrom,
         uint256 amountTo,
         uint256 deadline,
         bool feeOnTransfer
     ) external payable whenNotPaused nonReentrant {
         require(adapters[aggregatorId] != address(0), "EtaSwap: ADAPTER_DOES_NOT_EXIST");
-        _swap(aggregatorId, tokenFrom, tokenTo, amountFrom, amountTo, deadline, feeOnTransfer);
+        _swap(aggregatorId, tokenFrom, pathEncode, amountFrom, amountTo, deadline, feeOnTransfer);
     }
 
     function pauseSwaps() external onlyOwner {
@@ -95,7 +95,7 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard, IExchange {
     function _swap(
         string calldata aggregatorId,
         IERC20 tokenFrom,
-        IERC20 tokenTo,
+        bytes calldata pathEncode,
         uint256 amountFrom,
         uint256 amountTo,
         uint256 deadline,
@@ -110,7 +110,7 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard, IExchange {
         IAdapter(adapter).swap{value: msg.value}(
             payable(msg.sender),
             tokenFrom,
-            tokenTo,
+            pathEncode,
             amountFrom,
             amountTo,
             deadline,
