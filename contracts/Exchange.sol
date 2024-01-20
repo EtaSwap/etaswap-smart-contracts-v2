@@ -12,6 +12,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./interfaces/IAdapter.sol";
 import "./interfaces/IExchange.sol";
+import "./libraries/Path.sol";
 
 /**
  * @title Exchange
@@ -73,15 +74,15 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard, IExchange {
      */
     function swap(
         string calldata aggregatorId,
-        IERC20 tokenFrom,
-        bytes calldata pathEncode,
+        bytes calldata path,
         uint256 amountFrom,
         uint256 amountTo,
         uint256 deadline,
+        bool isTokenFromHBAR,
         bool feeOnTransfer
     ) external payable whenNotPaused nonReentrant {
         require(adapters[aggregatorId] != address(0), "EtaSwap: ADAPTER_DOES_NOT_EXIST");
-        _swap(aggregatorId, tokenFrom, pathEncode, amountFrom, amountTo, deadline, feeOnTransfer);
+        _swap(aggregatorId, path, amountFrom, amountTo, deadline, isTokenFromHBAR, feeOnTransfer);
     }
 
     function pauseSwaps() external onlyOwner {
@@ -94,23 +95,24 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard, IExchange {
 
     function _swap(
         string calldata aggregatorId,
-        IERC20 tokenFrom,
-        bytes calldata pathEncode,
+        bytes calldata path,
         uint256 amountFrom,
         uint256 amountTo,
         uint256 deadline,
+        bool isTokenFromHBAR,
         bool feeOnTransfer
     ) internal {
         address adapter = adapters[aggregatorId];
 
-        if (tokenFrom != hbar) {
-            tokenFrom.safeTransferFrom(msg.sender, adapter, amountFrom);
+
+        if (!isTokenFromHBAR) {
+            IERC20 token = Path.getFirstAddress(path);
+            token.safeTransferFrom(msg.sender, adapter, amountFrom);
         }
 
         IAdapter(adapter).swap{value: msg.value}(
             payable(msg.sender),
-            tokenFrom,
-            pathEncode,
+            path,
             amountFrom,
             amountTo,
             deadline,

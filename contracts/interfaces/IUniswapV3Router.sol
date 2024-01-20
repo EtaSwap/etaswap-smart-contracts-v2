@@ -48,4 +48,6 @@ interface IUniswapV3Router {
     }
 
     function exactOutput(ExactOutputParams calldata params) external payable returns (uint256 amountIn);
+
+    function unwrapWHBAR(uint256 amountMinimum, address recipient) external payable;
 }

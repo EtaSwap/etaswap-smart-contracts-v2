@@ -1,5 +1,6 @@
 const { ethers } = require("hardhat");
 const { AccountBalanceQuery } = require('@hashgraph/sdk');
+const { ORACLES } = require('../test/constants');
 
 module.exports = async ({ userAddress, tokenAddress }) => {
     const erc20ABI = [{
@@ -24,7 +25,11 @@ module.exports = async ({ userAddress, tokenAddress }) => {
 
     const wallet = (await ethers.getSigners())[0];
 
-    if (tokenAddress === ethers.constants.AddressZero) {
+    const whbarsAddresses = [
+
+    ];
+
+    if (Object.values(ORACLES).map(oracle => oracle.whbarToken).includes(tokenAddress)) {
         return (await ethers.provider.getBalance(userAddress)).div('10000000000');
     }
 

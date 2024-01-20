@@ -19,7 +19,6 @@ contract SaucerSwapAdapter is Ownable, IAdapter {
     IUniswapV2Router02 public immutable router;
     address payable public immutable feeWallet;
     uint8 public feePromille;
-    IERC20 private constant hbar = IERC20(0x0000000000000000000000000000000000000000);
     IERC20 public whbarToken;
     IWHBAR public whbarContract;
 
@@ -38,49 +37,47 @@ contract SaucerSwapAdapter is Ownable, IAdapter {
     /**
      * @dev Performs a swap
      * @param recipient The original msg.sender performing the swap
-     * @param tokenFrom Token to be swapped
-     * @param pathEncode Tokens to be swapped in format [IERC20 tokenFrom, IERC20 tokenTo]
+     * @param path Tokens to be swapped in format [IERC20 tokenFrom, IERC20 tokenTo]
      * @param amountFrom Amount of tokenFrom to swap
      * @param amountTo Minimum amount of tokenTo to receive
      * @param deadline Timestamp at which the swap becomes invalid. Used by Uniswap
      */
     function swap(
         address payable recipient,
-        IERC20 tokenFrom,
-        bytes calldata pathEncode,
+        bytes calldata path,
         uint256 amountFrom,
         uint256 amountTo,
         uint256 deadline,
         bool feeOnTransfer
     ) external payable {
-        (, IERC20 tokenTo) = abi.decode(pathEncode, (IERC20, IERC20));
+        (IERC20 tokenFrom, IERC20 tokenTo) = abi.decode(path, (IERC20, IERC20));
         require(tokenFrom != tokenTo, "EtaSwap: TOKEN_PAIR_INVALID");
 
-        uint256 fee = (tokenFrom == hbar ? msg.value : amountFrom) * feePromille / 1000;
+        uint256 fee = (tokenFrom == whbarToken ? msg.value : amountFrom) * feePromille / 1000;
         _transfer(tokenFrom, fee, feeWallet);
 
-        address[] memory path = new address[](2);
-        path[0] = address(tokenFrom == hbar ? whbarToken : tokenFrom);
-        path[1] = address(tokenTo == hbar ? whbarToken : tokenTo);
+        address[] memory pathDecode = new address[](2);
+        pathDecode[0] = address(tokenFrom);
+        pathDecode[1] = address(tokenTo);
 
-        uint256 amountFromWithoutFee = (tokenFrom == hbar ? msg.value : amountFrom) - fee;
+        uint256 amountFromWithoutFee = (tokenFrom == whbarToken ? msg.value : amountFrom) - fee;
 
         if (feeOnTransfer) {
-            if (tokenFrom == hbar) {
+            if (tokenFrom == whbarToken) {
                  uint[] memory amounts = router.swapETHForExactTokens{value: amountFromWithoutFee}(
                     amountTo,
-                    path,
+                    pathDecode,
                     address(this),
                     deadline
                 );
                 _transfer(tokenTo, amounts[1], recipient);
                 _transfer(tokenFrom, amountFromWithoutFee - amounts[0], recipient);
-            } else if (tokenTo == hbar) {
+            } else if (tokenTo == whbarToken) {
                 _approveSpender(tokenFrom, address(router), amountFromWithoutFee);
                 uint[] memory amounts = router.swapTokensForExactETH(
                     amountTo,
                     amountFromWithoutFee,
-                    path,
+                    pathDecode,
                     address(this),
                     deadline
                 );
@@ -91,7 +88,7 @@ contract SaucerSwapAdapter is Ownable, IAdapter {
                 uint[] memory amounts = router.swapTokensForExactTokens(
                     amountTo,
                     amountFromWithoutFee,
-                    path,
+                    pathDecode,
                     address(this),
                     deadline
                 );
@@ -100,19 +97,19 @@ contract SaucerSwapAdapter is Ownable, IAdapter {
             }
         } else {
             uint256 amountToReturn = 0;
-            if (tokenFrom == hbar) {
+            if (tokenFrom == whbarToken) {
                 amountToReturn = router.swapExactETHForTokens{value: amountFromWithoutFee}(
                     amountTo,
-                    path,
+                    pathDecode,
                     address(this),
                     deadline
                 )[1];
-            } else if (tokenTo == hbar) {
+            } else if (tokenTo == whbarToken) {
                 _approveSpender(tokenFrom, address(router), amountFromWithoutFee);
                 amountToReturn = router.swapExactTokensForETH(
                     amountFromWithoutFee,
                     amountTo,
-                    path,
+                    pathDecode,
                     address(this),
                     deadline
                 )[1];
@@ -121,7 +118,7 @@ contract SaucerSwapAdapter is Ownable, IAdapter {
                 amountToReturn = router.swapExactTokensForTokens(
                     amountFromWithoutFee,
                     amountTo,
-                    path,
+                    pathDecode,
                     address(this),
                     deadline
                 )[1];
@@ -142,7 +139,7 @@ contract SaucerSwapAdapter is Ownable, IAdapter {
         address payable recipient
     ) internal {
         if (amount > 0) {
-            if (token == hbar) {
+            if (token == whbarToken) {
                 (bool success,) = recipient.call{value:amount}(new bytes(0));
                 require(success, 'EtaSwap: HBAR_TRANSFER_FAILED');
             } else {

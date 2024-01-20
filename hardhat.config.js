@@ -30,6 +30,12 @@ task("get-balance", async (taskArgs) => {
   return getBalance(taskArgs);
 });
 
+task("get-quote", async (taskArgs) => {
+  const getQuote= require("./scripts/getQuote");
+  const { aggregatorId, ...cleanArgs } = taskArgs;
+  return getQuote[aggregatorId](cleanArgs);
+});
+
 task("deploy-exchange", async (taskArgs) => {
   const deployExchange = require("./scripts/deployExchange");
   return deployExchange(taskArgs);

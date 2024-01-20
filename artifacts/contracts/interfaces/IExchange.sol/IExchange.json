@@ -61,13 +61,8 @@
           "type": "string"
         },
         {
-          "internalType": "contract IERC20",
-          "name": "tokenFrom",
-          "type": "address"
-        },
-        {
           "internalType": "bytes",
-          "name": "pathEncode",
+          "name": "path",
           "type": "bytes"
         },
         {
@@ -84,6 +79,11 @@
           "internalType": "uint256",
           "name": "deadline",
           "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "isTokenFromHBAR",
+          "type": "bool"
         },
         {
           "internalType": "bool",

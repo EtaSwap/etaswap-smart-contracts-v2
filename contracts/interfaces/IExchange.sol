@@ -11,11 +11,11 @@ interface IExchange {
 
     function swap(
         string calldata aggregatorId,
-        IERC20 tokenFrom,
-        bytes calldata pathEncode,
+        bytes calldata path,
         uint256 amountFrom,
         uint256 amountTo,
         uint256 deadline,
+        bool isTokenFromHBAR,
         bool feeOnTransfer
     ) external payable;
 }

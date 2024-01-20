@@ -12,19 +12,20 @@ module.exports = async ({
                             clientAccount,
                             exchangeAddress,
                             tokenFrom,
-                            tokenTo,
+                            path,
                             amountFrom,
                             amountTo,
                             aggregatorId,
                             feeOnTransfer,
                             gasLimit,
+                            isTokenFromHBAR,
                         }) => {
     const wallet = (await ethers.getSigners())[0];
 
     const exchange = await ethers.getContractAt("Exchange", exchangeAddress, wallet);
 
     // Allow from user to swap
-    if (tokenFrom !== ethers.constants.AddressZero) {
+    if (!isTokenFromHBAR) {
         const amountFromLong = Long.fromString(amountFrom.toString());
         const allowanceTx = new AccountAllowanceApproveTransaction()
             .approveTokenAllowance(TokenId.fromSolidityAddress(tokenFrom), clientAccount.id, ContractId.fromSolidityAddress(exchangeAddress), amountFromLong)
@@ -34,24 +35,23 @@ module.exports = async ({
         await allowanceSubmit.getReceipt(client);
     }
 
-    const poolFee = 500;
     //swap transaction
     const deadline = Math.floor(Date.now() / 1000) + 1000;
     const tx = await exchange.swap(
         aggregatorId,
-        tokenFrom,
-        ethers.utils.defaultAbiCoder.encode(['address', 'address', 'bytes3'], [tokenFrom, tokenTo, '0x' + poolFee.toString(16).padStart(6, '0')]),
+        path,
         amountFrom,
         amountTo,
         deadline,
+        isTokenFromHBAR,
         feeOnTransfer,
         {
           gasLimit,
-          value: tokenFrom === ethers.constants.AddressZero ? ethers.utils.parseUnits(Hbar.fromTinybars(amountFrom.toString()).to(HbarUnit.Hbar).toString()) : 0,
+          value: isTokenFromHBAR ? ethers.utils.parseUnits(Hbar.fromTinybars(amountFrom.toString()).to(HbarUnit.Hbar).toString()) : 0,
         }
     );
-    await tx.wait();
-    console.log(`Swap on ${aggregatorId}: ${tx.hash}`);
+    const res = await tx.wait();
+    console.log(`Swap on ${aggregatorId}: ${tx.hash} (${res.gasUsed} Gas (${((gasLimit - res.gasUsed) / gasLimit * 100).toFixed(2)}%))`);
 
     return tx.hash;
 };

@@ -2,13 +2,12 @@ const hre = require("hardhat");
 const { expect } = require("chai");
 const { ORACLES } = require('./constants');
 const { AccountId } = require('@hashgraph/sdk');
-const { ethers } = require('hardhat');
 
 const GAS_LIMITS = {
-    exactTokenToToken: 970000, //877969    875079
+    exactTokenToToken: 940000, //877969    875079
     exactHBARToToken: 260000, //221207     203366
     exactTokenToHBAR: 1690000, //1629306   1623679
-    tokenToExactToken: 970000, //894071    891182
+    tokenToExactToken: 940000, //894071    891182
     HBARToExactToken: 260000, //211040     218135
     tokenToExactHBAR: 1690000, //1645353   1639941
 }
@@ -21,8 +20,16 @@ describe.only("Exchange", function () {
     let clientAccount;
     let feeAccount;
     let signers;
+    let gasApiPrice;
 
-    let feeRate = 0.005;
+    const getGas = async (gasLimit) => {
+        if (!gasApiPrice) {
+            gasApiPrice = await axios.get('https://mainnet-public.mirrornode.hedera.com/api/v1/network/exchangerate');
+        }
+        const rate = gasApiPrice.data.current_rate.hbar_equivalent / gasApiPrice.data.current_rate.cent_equivalent * 100;
+        const approxCost1Gas = 0.000000082;
+        return rate * gasLimit * approxCost1Gas;
+    }
 
     before(async function () {
         const initData = await hre.run('init');
@@ -36,7 +43,7 @@ describe.only("Exchange", function () {
         }
     });
 
-    it("should be able to deploy exchange and attach Uniswap adapter", async function () {
+    it.only("should be able to deploy exchange and attach Uniswap adapter", async function () {
         const exchange = await hre.run("deploy-exchange", {
             client,
             clientAccount,
@@ -56,178 +63,185 @@ describe.only("Exchange", function () {
 
     it("should be able to exchange exact tokens to tokens", async function () {
         for (const name of Object.keys(ORACLES)) {
-            const { tokenA, tokenB } = ORACLES[name].validPair;
-            const tokenABalanceBefore = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenA
-            });
-            const tokenBBalanceBefore = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenB
-            });
-            const tokenABalanceFeeBefore = await hre.run('get-balance', {
-                userAddress: feeAccount.id.toSolidityAddress(),
-                tokenAddress: tokenA
-            });
-            const slippageTolerance = 0.025;
-            const { rate } = await hre.run('get-rate-oracle', {
-                name,
-                address: ORACLES[name].address,
+            if (!ORACLES[name].validPair) {
+                console.warn(`Missing token pair for ${name}`);
+                continue;
+            }
+            const { tokenA, tokenB, poolFee} = ORACLES[name].validPair;
+            const [tokenABalanceBefore, tokenBBalanceBefore, tokenABalanceFeeBefore] = await Promise.all([
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+                hre.run('get-balance', {
+                    userAddress: feeAccount.id.toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+            ]);
+
+            const { amountFrom, amountTo, path, etaSwapFee } = await hre.run('get-quote', {
+                aggregatorId: [ORACLES[name].aggregatorId],
                 tokenA,
                 tokenB,
+                poolFee,
             });
-
-            const amountFrom = hre.ethers.BigNumber.from(100000000);
-            const amountTo = amountFrom.mul(rate).div(hre.ethers.BigNumber.from(10).pow(18)).mul(1000 - slippageTolerance * 1000 - feeRate * 1000).div(1000);
-
             await hre.run("call-exchange", {
                 client,
                 clientAccount,
                 exchangeAddress,
                 tokenFrom: tokenA,
-                tokenTo: tokenB,
+                path,
                 amountFrom,
                 amountTo,
                 aggregatorId: ORACLES[name].aggregatorId,
                 feeOnTransfer: false,
                 gasLimit: GAS_LIMITS.exactTokenToToken,
+                isTokenFromHBAR: false,
             });
 
-            const tokenABalanceAfter = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenA
-            });
-            const tokenBBalanceAfter = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenB
-            });
-            const tokenABalanceFeeAfter = await hre.run('get-balance', {
-                userAddress: feeAccount.id.toSolidityAddress(),
-                tokenAddress: tokenA
-            });
+            const [tokenABalanceAfter, tokenBBalanceAfter, tokenABalanceFeeAfter] = await Promise.all([
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+                hre.run('get-balance', {
+                    userAddress: feeAccount.id.toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+            ]);
 
             expect(tokenABalanceAfter).to.be.equal(tokenABalanceBefore.sub(amountFrom));
             expect(tokenBBalanceAfter).to.be.greaterThan(tokenBBalanceBefore.add(amountTo));
-            expect(tokenBBalanceAfter).to.be.lessThanOrEqual(tokenBBalanceBefore.add(amountFrom.mul(rate).div(hre.ethers.BigNumber.from(10).pow(18)).mul((1 - feeRate) * 1000).div(1000)));
-            expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(amountFrom.mul(feeRate * 1000).div(1000))).abs()).to.be.lessThanOrEqual(100);
+            expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(etaSwapFee)).abs()).to.be.lessThanOrEqual(100);
         }
     });
 
     it("should be able to exchange exact HBAR to tokens", async function () {
         for (const name of Object.keys(ORACLES)) {
-            const { tokenA, tokenB } = ORACLES[name].validPairHbar;
-            const tokenABalanceBefore = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenA
-            });
-            const tokenBBalanceBefore = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenB
-            });
-            const tokenABalanceFeeBefore = await hre.run('get-balance', {
-                userAddress: feeAccount.id.toSolidityAddress(),
-                tokenAddress: tokenA
-            });
-            const slippageTolerance = 0.025;
-            const { rate } = await hre.run('get-rate-oracle', {
-                name,
-                address: ORACLES[name].address,
-                tokenA: tokenA === ethers.constants.AddressZero ? ORACLES[name].whbarToken : tokenA,
-                tokenB: tokenB === ethers.constants.AddressZero ? ORACLES[name].whbarToken : tokenB,
-            });
+            const { tokenA, tokenB, poolFee } = ORACLES[name].validPairHbar;
 
-            const amountFrom = hre.ethers.BigNumber.from(100000000);
-            const amountTo = amountFrom.mul(rate).div(hre.ethers.BigNumber.from(10).pow(18)).mul(1000 - slippageTolerance * 1000 - feeRate * 1000).div(1000);
+            const [tokenABalanceBefore, tokenBBalanceBefore, tokenABalanceFeeBefore] = await Promise.all([
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+                hre.run('get-balance', {
+                    userAddress: feeAccount.id.toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+            ]);
 
+            const { amountFrom, amountTo, path, etaSwapFee } = await hre.run('get-quote', {
+                aggregatorId: [ORACLES[name].aggregatorId],
+                tokenA,
+                tokenB,
+                poolFee,
+            });
             await hre.run("call-exchange", {
                 client,
                 clientAccount,
                 exchangeAddress,
                 tokenFrom: tokenA,
-                tokenTo: tokenB,
+                path,
                 amountFrom,
                 amountTo,
                 aggregatorId: ORACLES[name].aggregatorId,
                 feeOnTransfer: false,
                 gasLimit: GAS_LIMITS.exactHBARToToken,
+                isTokenFromHBAR: true,
             });
 
-            const tokenABalanceAfter = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenA
-            });
-            const tokenBBalanceAfter = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenB
-            });
-            const tokenABalanceFeeAfter = await hre.run('get-balance', {
-                userAddress: feeAccount.id.toSolidityAddress(),
-                tokenAddress: tokenA
-            });
+
+            const [tokenABalanceAfter, tokenBBalanceAfter, tokenABalanceFeeAfter] = await Promise.all([
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+                hre.run('get-balance', {
+                    userAddress: feeAccount.id.toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+            ]);
 
             expect(tokenABalanceAfter).not.to.be.equal(tokenABalanceBefore);
             expect(tokenBBalanceAfter).to.be.greaterThan(tokenBBalanceBefore.add(amountTo));
-            expect(tokenBBalanceAfter).to.be.lessThanOrEqual(tokenBBalanceBefore.add(amountFrom.mul(rate).div(hre.ethers.BigNumber.from(10).pow(18)).mul((1 - feeRate) * 1000).div(1000)));
-            expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(amountFrom.mul(feeRate * 1000).div(1000))).abs()).to.be.lessThanOrEqual(100);
+            expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(etaSwapFee).abs())).to.be.lessThanOrEqual(100);
         }
     });
 
-    it("should be able to exchange exact tokens to HBAR", async function () {
+    it.only("should be able to exchange exact tokens to HBAR", async function () {
         for (const name of Object.keys(ORACLES)) {
-            const { tokenA, tokenB } = ORACLES[name].validPairHbar;
-            const tokenABalanceBefore = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenA
-            });
-            const tokenBBalanceBefore = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenB
-            });
-            const tokenBBalanceFeeBefore = await hre.run('get-balance', {
-                userAddress: feeAccount.id.toSolidityAddress(),
-                tokenAddress: tokenB
-            });
-            const slippageTolerance = 0.025;
-            const { rate } = await hre.run('get-rate-oracle', {
-                name,
-                address: ORACLES[name].address,
-                tokenA: tokenB === ethers.constants.AddressZero ? ORACLES[name].whbarToken : tokenB,
-                tokenB: tokenA === ethers.constants.AddressZero ? ORACLES[name].whbarToken : tokenA,
-            });
+            const { tokenA, tokenB, poolFee } = ORACLES[name].validPairHbar;
 
-            const amountFrom = hre.ethers.BigNumber.from(100000);
-            const amountTo = amountFrom.mul(rate).div(hre.ethers.BigNumber.from(10).pow(18)).mul(1000 - slippageTolerance * 1000 - feeRate * 1000).div(1000);
+            const [tokenABalanceBefore, tokenBBalanceBefore, tokenBBalanceFeeBefore] = await Promise.all([
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+                hre.run('get-balance', {
+                    userAddress: feeAccount.id.toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+            ]);
 
+            const { amountFrom, amountTo, path } = await hre.run('get-quote', {
+                aggregatorId: [ORACLES[name].aggregatorId],
+                tokenA: tokenB,
+                tokenB: tokenA,
+                poolFee,
+            });
             await hre.run("call-exchange", {
                 client,
                 clientAccount,
                 exchangeAddress,
                 tokenFrom: tokenB,
-                tokenTo: tokenA,
+                path,
                 amountFrom,
                 amountTo,
                 aggregatorId: ORACLES[name].aggregatorId,
                 feeOnTransfer: false,
                 gasLimit: GAS_LIMITS.exactTokenToHBAR,
+                isTokenFromHBAR: false,
             });
 
-            const tokenABalanceAfter = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenA
-            });
-            const tokenBBalanceAfter = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenB
-            });
-            const tokenBBalanceFeeAfter = await hre.run('get-balance', {
-                userAddress: feeAccount.id.toSolidityAddress(),
-                tokenAddress: tokenB
-            });
+            const [tokenABalanceAfter, tokenBBalanceAfter, tokenBBalanceFeeAfter] = await Promise.all([
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+                hre.run('get-balance', {
+                    userAddress: feeAccount.id.toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+            ]);
 
+            const gas = await getGas(GAS_LIMITS.exactTokenToHBAR);
             expect(tokenBBalanceAfter).to.be.equal(tokenBBalanceBefore.sub(amountFrom));
-            // TODO: -gas
-            // expect(tokenABalanceAfter).to.be.greaterThan(tokenABalanceBefore.add(amountTo));
-            expect(tokenABalanceAfter).to.be.lessThanOrEqual(tokenABalanceBefore.add(amountFrom.mul(rate).div(hre.ethers.BigNumber.from(10).pow(18)).mul((1 - feeRate) * 1000).div(1000)));
+            expect(tokenABalanceAfter).to.be.greaterThan(tokenABalanceBefore.add(amountTo).sub(gas));
             expect(tokenBBalanceFeeAfter.sub(tokenBBalanceFeeBefore.add(amountFrom.mul(feeRate * 1000).div(1000))).abs()).to.be.lessThanOrEqual(100);
         }
     });
@@ -250,56 +264,68 @@ describe.only("Exchange", function () {
 
     it("should be able to exchange tokens to exact tokens", async function () {
         for (const name of Object.keys(ORACLES)) {
-            const { tokenA, tokenB } = ORACLES[name].validPair;
-            const tokenABalanceBefore = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenA
-            });
-            const tokenBBalanceBefore = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenB
-            });
-            const tokenABalanceFeeBefore = await hre.run('get-balance', {
-                userAddress: feeAccount.id.toSolidityAddress(),
-                tokenAddress: tokenA
-            });
-            const slippageTolerance = 0.025;
-            const { rate } = await hre.run('get-rate-oracle', {
-                name,
-                address: ORACLES[name].address,
-                tokenA: tokenB,
-                tokenB: tokenA,
-            });
+            if (!ORACLES[name].validPair) {
+                console.warn(`Missing token pair for ${name}`);
+                continue;
+            }
+            const { tokenA, tokenB, poolFee } = ORACLES[name].validPair;
 
-            const amountTo = hre.ethers.BigNumber.from(100000);
-            const amountFrom = amountTo.mul(rate).div(hre.ethers.BigNumber.from(10).pow(18)).mul(1000 + slippageTolerance * 1000 + feeRate * 1000).div(1000);
+            const [tokenABalanceBefore, tokenBBalanceBefore, tokenABalanceFeeBefore, { rate }] = await Promise.all([
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+                hre.run('get-balance', {
+                    userAddress: feeAccount.id.toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+                hre.run('get-rate-oracle', {
+                    name,
+                    address: ORACLES[name].address,
+                    tokenA: tokenB,
+                    tokenB: tokenA,
+                }),
+            ]);
 
+            const { amountFrom, amountTo, path } = await hre.run('get-quote', {
+                aggregatorId: [ORACLES[name].aggregatorId],
+                tokenA,
+                tokenB,
+                poolFee,
+            });
             await hre.run("call-exchange", {
                 client,
                 clientAccount,
                 exchangeAddress,
                 tokenFrom: tokenA,
-                tokenTo: tokenB,
+                path,
                 amountFrom,
                 amountTo,
                 aggregatorId: ORACLES[name].aggregatorId,
                 feeOnTransfer: true,
                 gasLimit: GAS_LIMITS.tokenToExactToken,
+                isTokenFromHBAR: false,
             });
 
 
-            const tokenABalanceAfter = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenA
-            });
-            const tokenBBalanceAfter = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenB
-            });
-            const tokenABalanceFeeAfter = await hre.run('get-balance', {
-                userAddress: feeAccount.id.toSolidityAddress(),
-                tokenAddress: tokenA
-            });
+            const [tokenABalanceAfter, tokenBBalanceAfter, tokenABalanceFeeAfter] = await Promise.all([
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+                hre.run('get-balance', {
+                    userAddress: feeAccount.id.toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+            ]);
 
             expect(tokenABalanceAfter).to.be.greaterThan(tokenABalanceBefore.sub(amountFrom));
             expect(tokenABalanceAfter).to.be.lessThanOrEqual(tokenABalanceBefore.sub(amountTo.mul(rate).div(hre.ethers.BigNumber.from(10).pow(18)).mul(1000 + feeRate * 1000).div(1000)));
@@ -310,56 +336,63 @@ describe.only("Exchange", function () {
 
     it("should be able to exchange HBAR to exact tokens", async function () {
         for (const name of Object.keys(ORACLES)) {
-            const { tokenA, tokenB } = ORACLES[name].validPairHbar;
-            const tokenABalanceBefore = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenA
-            });
-            const tokenBBalanceBefore = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenB
-            });
-            const tokenABalanceFeeBefore = await hre.run('get-balance', {
-                userAddress: feeAccount.id.toSolidityAddress(),
-                tokenAddress: tokenA
-            });
-            const slippageTolerance = 0.025;
-            const { rate } = await hre.run('get-rate-oracle', {
-                name,
-                address: ORACLES[name].address,
-                tokenA: tokenB === ethers.constants.AddressZero ? ORACLES[name].whbarToken : tokenB,
-                tokenB: tokenA === ethers.constants.AddressZero ? ORACLES[name].whbarToken : tokenA,
-            });
+            const { tokenA, tokenB, poolFee } = ORACLES[name].validPairHbar;
 
-            const amountTo = hre.ethers.BigNumber.from(1000000);
-            const amountFrom = amountTo.mul(rate).div(hre.ethers.BigNumber.from(10).pow(18)).mul(1000 + slippageTolerance * 1000 + feeRate * 1000).div(1000);
+            const [tokenABalanceBefore, tokenBBalanceBefore, tokenABalanceFeeBefore, { rate }] = await Promise.all([
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+                hre.run('get-balance', {
+                    userAddress: feeAccount.id.toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+                hre.run('get-rate-oracle', {
+                    name,
+                    address: ORACLES[name].address,
+                    tokenA,
+                    tokenB,
+                }),
+            ]);
 
+            const { amountFrom, amountTo, path } = await hre.run('get-quote', {
+                aggregatorId: [ORACLES[name].aggregatorId],
+                tokenA,
+                tokenB,
+                poolFee,
+            });
             await hre.run("call-exchange", {
                 client,
                 clientAccount,
                 exchangeAddress,
                 tokenFrom: tokenA,
-                tokenTo: tokenB,
+                path,
                 amountFrom: amountFrom,
                 amountTo,
                 aggregatorId: ORACLES[name].aggregatorId,
                 feeOnTransfer: true,
                 gasLimit: GAS_LIMITS.HBARToExactToken,
+                isTokenFromHBAR: true,
             });
 
-
-            const tokenABalanceAfter = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenA
-            });
-            const tokenBBalanceAfter = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenB
-            });
-            const tokenABalanceFeeAfter = await hre.run('get-balance', {
-                userAddress: feeAccount.id.toSolidityAddress(),
-                tokenAddress: tokenA
-            });
+            const [tokenABalanceAfter, tokenBBalanceAfter, tokenABalanceFeeAfter] = await Promise.all([
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+                hre.run('get-balance', {
+                    userAddress: feeAccount.id.toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+            ]);
 
             expect(tokenABalanceAfter).to.be.lessThanOrEqual(tokenABalanceBefore.sub(amountTo.mul(rate).div(hre.ethers.BigNumber.from(10).pow(18)).mul(1000 + feeRate * 1000).div(1000)));
             expect(tokenBBalanceAfter).to.be.equal(tokenBBalanceBefore.add(amountTo));
@@ -369,56 +402,64 @@ describe.only("Exchange", function () {
 
     it("should be able to exchange tokens to exact HBAR", async function () {
         for (const name of Object.keys(ORACLES)) {
-            const { tokenA, tokenB } = ORACLES[name].validPairHbar;
-            const tokenABalanceBefore = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenA
-            });
-            const tokenBBalanceBefore = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenB
-            });
-            const tokenBBalanceFeeBefore = await hre.run('get-balance', {
-                userAddress: feeAccount.id.toSolidityAddress(),
-                tokenAddress: tokenB
-            });
-            const slippageTolerance = 0.025;
-            const { rate } = await hre.run('get-rate-oracle', {
-                name,
-                address: ORACLES[name].address,
-                tokenA: tokenA === ethers.constants.AddressZero ? ORACLES[name].whbarToken : tokenA,
-                tokenB: tokenB === ethers.constants.AddressZero ? ORACLES[name].whbarToken : tokenB,
-            });
+            const { tokenA, tokenB, poolFee } = ORACLES[name].validPairHbar;
 
-            const amountTo = hre.ethers.BigNumber.from(100000000);
-            const amountFrom = amountTo.mul(rate).div(hre.ethers.BigNumber.from(10).pow(18)).mul(1000 + slippageTolerance * 1000 + feeRate * 1000).div(1000);
+            const [tokenABalanceBefore, tokenBBalanceBefore, tokenBBalanceFeeBefore, { rate }] = await Promise.all([
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+                hre.run('get-balance', {
+                    userAddress: feeAccount.id.toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+                hre.run('get-rate-oracle', {
+                    name,
+                    address: ORACLES[name].address,
+                    tokenA,
+                    tokenB,
+                }),
+            ]);
 
+            const { amountFrom, amountTo, path } = await hre.run('get-quote', {
+                aggregatorId: [ORACLES[name].aggregatorId],
+                tokenA: tokenB,
+                tokenB: tokenA,
+                poolFee,
+            });
             await hre.run("call-exchange", {
                 client,
                 clientAccount,
                 exchangeAddress,
                 tokenFrom: tokenB,
-                tokenTo: tokenA,
+                path,
                 amountFrom,
                 amountTo,
                 aggregatorId: ORACLES[name].aggregatorId,
                 feeOnTransfer: true,
                 gasLimit: GAS_LIMITS.tokenToExactHBAR,
+                isTokenFromHBAR: false,
             });
 
 
-            const tokenABalanceAfter = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenA
-            });
-            const tokenBBalanceAfter = await hre.run('get-balance', {
-                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
-                tokenAddress: tokenB
-            });
-            const tokenBBalanceFeeAfter = await hre.run('get-balance', {
-                userAddress: feeAccount.id.toSolidityAddress(),
-                tokenAddress: tokenB
-            });
+            const [tokenABalanceAfter, tokenBBalanceAfter, tokenBBalanceFeeAfter] = await Promise.all([
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+                hre.run('get-balance', {
+                    userAddress: feeAccount.id.toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+            ]);
 
             expect(tokenBBalanceAfter).to.be.greaterThan(tokenBBalanceBefore.sub(amountFrom));
             expect(tokenBBalanceAfter).to.be.lessThanOrEqual(tokenBBalanceBefore.sub(amountTo.mul(rate).div(hre.ethers.BigNumber.from(10).pow(18)).mul(1000 + feeRate * 1000).div(1000)));
@@ -430,7 +471,7 @@ describe.only("Exchange", function () {
 
     it('should be able to pause and unpause swaps by admin', async function () {
         for (const name of Object.keys(ORACLES)) {
-            const { tokenA, tokenB } = ORACLES[name].validPair;
+            const { tokenA, tokenB, poolFee } = ORACLES[name].validPairHbar;
             const tokenABalanceBefore = await hre.run('get-balance', {
                 userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
                 tokenAddress: tokenA
@@ -438,29 +479,25 @@ describe.only("Exchange", function () {
 
             await hre.run('set-exchange-paused', { exchangeAddress, paused: true });
 
-            const slippageTolerance = 0.025;
-            const { rate } = await hre.run('get-rate-oracle', {
-                name,
-                address: ORACLES[name].address,
+            const { amountFrom, amountTo, path } = await hre.run('get-quote', {
+                aggregatorId: [ORACLES[name].aggregatorId],
                 tokenA,
                 tokenB,
+                poolFee,
             });
-
-            const amountFrom = hre.ethers.BigNumber.from(100000000);
-            const amountTo = amountFrom.mul(rate).div(hre.ethers.BigNumber.from(10).pow(18)).mul(1000 - slippageTolerance * 1000 - feeRate * 1000).div(1000);
-
             try {
                 await hre.run("call-exchange", {
                     client,
                     clientAccount,
                     exchangeAddress,
                     tokenFrom: tokenA,
-                    tokenTo: tokenB,
+                    path,
                     amountFrom,
                     amountTo,
                     aggregatorId: ORACLES[name].aggregatorId,
                     feeOnTransfer: false,
                     gasLimit: GAS_LIMITS.exactTokenToToken,
+                    isTokenFromHBAR: true,
                 });
                 expect(true).to.be.equal(false);
             } catch (err) {
@@ -481,12 +518,13 @@ describe.only("Exchange", function () {
                 clientAccount,
                 exchangeAddress,
                 tokenFrom: tokenA,
-                tokenTo: tokenB,
+                path,
                 amountFrom,
                 amountTo,
                 aggregatorId: ORACLES[name].aggregatorId,
                 feeOnTransfer: false,
                 gasLimit: GAS_LIMITS.exactTokenToToken,
+                isTokenFromHBAR: true,
             });
 
             const tokenABalanceAfter = await hre.run('get-balance', {

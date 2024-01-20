@@ -1,16 +1,43 @@
 const { ethers } = require('hardhat');
 
 const ORACLES = {
-    SaucerSwapOracle: {
+    SaucerSwapV2Oracle: {
+        factory: '0x00000000000000000000000000000000002ecbd1',
+        validPair: {
+            tokenA: '0x0000000000000000000000000000000000022ed0',
+            tokenAName: 'AAA',
+            tokenB: '0x0000000000000000000000000000000000022ed7',
+            tokenBName: 'BBB',
+            poolFee: 1500,
+        },
+        validPairHbar: {
+            tokenA: '0x000000000000000000000000000000000000e6a2',
+            tokenAName: 'HBAR',
+            tokenB: '0x000000000000000000000000000000000000ef52',
+            tokenBName: 'SAUCE',
+            poolFee: 3000,
+        },
+        address: '0x0000000000000000000000000000000000306916',
+        router: '0x0000000000000000000000000000000000306972',
+        aggregatorId: 'SaucerSwapV2',
+        tokensToAssociate: [
+            ['0.0.58850', '0.0.59042', '0.0.61266', '0.0.117947', '0.0.143056'],
+            ['0.0.143063', '0.0.447892', '0.0.447893', '0.0.447894', '0.0.447895']
+        ],
+        whbarToken: '0x000000000000000000000000000000000000e6a2',
+        whbarContract: '0x000000000000000000000000000000000000e6a1',
+        adapterContract: 'SaucerSwapV2Adapter',
+    },
+    /*SaucerSwapOracle: {
         factory: '0x000000000000000000000000000000000000e0c9',
         validPair: {
-            tokenA: '0x000000000000000000000000000000000000e6a2',
-            tokenAName: 'WHBAR',
+            tokenA: '0x000000000000000000000000000000000006d594',
+            tokenAName: 'USDC',
             tokenB: '0x000000000000000000000000000000000000ef52',
             tokenBName: 'SAUCE',
         },
         validPairHbar: {
-            tokenA: ethers.constants.AddressZero,
+            tokenA: '0x000000000000000000000000000000000000e6a2',
             tokenAName: 'HBAR',
             tokenB: '0x000000000000000000000000000000000006d595',
             tokenBName: 'CLXY',
@@ -29,13 +56,13 @@ const ORACLES = {
     PangolinOracle: {
         factory: '0x0000000000000000000000000000000000070297',
         validPair: {
-            tokenA: '0x000000000000000000000000000000000002690a',
-            tokenAName: 'WHBAR',
+            tokenA: '0x0000000000000000000000000000000000070293',
+            tokenAName: 'PBAR',
             tokenB: '0x00000000000000000000000000000000000274a3',
             tokenBName: 'USDC',
         },
         validPairHbar: {
-            tokenA: ethers.constants.AddressZero,
+            tokenA: '0x000000000000000000000000000000000002690a',
             tokenAName: 'HBAR',
             tokenB: '0x0000000000000000000000000000000000070293',
             tokenBName: 'PBAR',
@@ -47,7 +74,7 @@ const ORACLES = {
         whbarToken: '0x000000000000000000000000000000000002690a',
         whbarContract: '0x0000000000000000000000000000000000026909',
         adapterContract: 'PangolinAdapter',
-    },
+    },*/
 };
          //  ['0.0.1062664', '0.0.127877', '0.0.1738930'],
 
