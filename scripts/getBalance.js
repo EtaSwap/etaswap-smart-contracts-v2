@@ -25,10 +25,6 @@ module.exports = async ({ userAddress, tokenAddress }) => {
 
     const wallet = (await ethers.getSigners())[0];
 
-    const whbarsAddresses = [
-
-    ];
-
     if (Object.values(ORACLES).map(oracle => oracle.whbarToken).includes(tokenAddress)) {
         return (await ethers.provider.getBalance(userAddress)).div('10000000000');
     }

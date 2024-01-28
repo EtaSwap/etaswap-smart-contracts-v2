@@ -106,7 +106,7 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard, IExchange {
 
 
         if (!isTokenFromHBAR) {
-            IERC20 token = Path.getFirstAddress(path);
+            IERC20 token = feeOnTransfer ? Path.getLastAddress(path) : Path.getFirstAddress(path);
             token.safeTransferFrom(msg.sender, adapter, amountFrom);
         }
 

@@ -53,8 +53,8 @@ contract SaucerSwapV2Adapter is Ownable, IAdapter {
         uint256 deadline,
         bool feeOnTransfer
     ) external payable {
-        IERC20 tokenFrom = Path.getFirstAddress(path);
-        IERC20 tokenTo = Path.getLastAddress(path);
+        IERC20 tokenFrom = feeOnTransfer ? Path.getLastAddress(path) : Path.getFirstAddress(path);
+        IERC20 tokenTo = feeOnTransfer ? Path.getFirstAddress(path) : Path.getLastAddress(path);
         require(tokenFrom != tokenTo, "EtaSwap: TOKEN_PAIR_INVALID");
 
         uint256 fee = (tokenFrom == whbarToken ? msg.value : amountFrom) * feePromille / 1000;
@@ -66,13 +66,18 @@ contract SaucerSwapV2Adapter is Ownable, IAdapter {
             uint256 amountSpent = 0;
             IUniswapV3Router.ExactOutputParams memory routerInput = IUniswapV3Router.ExactOutputParams({
                 path: path,
-                recipient: address(this),
+                recipient: tokenTo == whbarToken ? address(router) : address(this),
                 deadline: deadline,
                 amountOut: amountTo,
                 amountInMaximum: amountFromWithoutFee
             });
             if (tokenFrom == whbarToken) {
                 amountSpent = router.exactOutput{value: amountFromWithoutFee}(routerInput);
+                router.refundETH();
+            } else if (tokenTo == whbarToken) {
+                _approveSpender(tokenFrom, address(router), amountFromWithoutFee);
+                amountSpent = router.exactOutput(routerInput);
+                router.unwrapWHBAR(amountTo, address(this));
             } else {
                 _approveSpender(tokenFrom, address(router), amountFromWithoutFee);
                 amountSpent = router.exactOutput(routerInput);
@@ -83,20 +88,22 @@ contract SaucerSwapV2Adapter is Ownable, IAdapter {
             uint256 amountToReturn = 0;
             IUniswapV3Router.ExactInputParams memory routerInput = IUniswapV3Router.ExactInputParams({
                 path: path,
-                recipient: address(this),
+                recipient: tokenTo == whbarToken ? address(router) : address(this),
                 deadline: deadline,
                 amountIn: amountFromWithoutFee,
                 amountOutMinimum: amountTo
             });
             if (tokenFrom == whbarToken) {
                 amountToReturn = router.exactInput{value: amountFromWithoutFee}(routerInput);
+            } else if (tokenTo == whbarToken) {
+                _approveSpender(tokenFrom, address(router), amountFromWithoutFee);
+                amountToReturn = router.exactInput(routerInput);
+                router.unwrapWHBAR(amountToReturn, address(this));
             } else {
                 _approveSpender(tokenFrom, address(router), amountFromWithoutFee);
                 amountToReturn = router.exactInput(routerInput);
             }
-            if (tokenTo == whbarToken) {
-                router.unwrapWHBAR(1, address(this));
-            }
+            require(amountToReturn >= amountTo);
             _transfer(tokenTo, amountToReturn, recipient);
         }
     }

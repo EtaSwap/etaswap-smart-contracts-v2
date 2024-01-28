@@ -32,8 +32,8 @@ task("get-balance", async (taskArgs) => {
 
 task("get-quote", async (taskArgs) => {
   const getQuote= require("./scripts/getQuote");
-  const { aggregatorId, ...cleanArgs } = taskArgs;
-  return getQuote[aggregatorId](cleanArgs);
+  const { aggregatorId, feeOnTransfer, ...cleanArgs } = taskArgs;
+  return getQuote[aggregatorId + (feeOnTransfer ? 'FeeOnTransfer' : '')](cleanArgs);
 });
 
 task("deploy-exchange", async (taskArgs) => {

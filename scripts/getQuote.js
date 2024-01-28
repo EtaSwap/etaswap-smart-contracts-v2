@@ -60,6 +60,45 @@ module.exports = {
         const result = abiInterface.decodeFunctionResult('quoteExactInput', response.data.result);
         const amountTo = result.amountOut.mul(1000 - slippageTolerance * 1000 - feeRate * 1000).div(1000);
 
-        return { amountFrom, amountTo, path: '0x' + path.join(''), gasEstimate: result.gasEstimate, etaSwapFee };
+        return {
+            amountFrom,
+            amountTo,
+            path: '0x' + path.join(''),
+            gasEstimate: result.gasEstimate,
+            etaSwapFee
+        };
+    },
+    SaucerSwapV2FeeOnTransfer: async ({ tokenA, tokenB, poolFee }) => {
+        const abiInterface = new hre.ethers.utils.Interface(SaucerSwapV2QuoterAbi);
+        const path = [
+            tokenB.substring(2),
+            poolFee.toString(16).padStart(6, '0'),
+            tokenA.substring(2),
+        ];
+
+        const encodedPath = Uint8Array.from(Buffer.from(path.join(''), 'hex'));
+        const amountTo = hre.ethers.BigNumber.from(10000);
+        const params = [encodedPath, amountTo.toHexString()];
+        const encodedData = abiInterface.encodeFunctionData(abiInterface.getFunction('quoteExactOutput'), params);
+
+        const url = `https://testnet.mirrornode.hedera.com/api/v1/contracts/call`;
+        const data = {
+            'block': 'latest',
+            'data': encodedData,
+            'to': ORACLES['SaucerSwapV2Oracle'].address,
+        };
+
+        const response = await axios.post(url, data, { headers: { 'content-type': 'application/json' } });
+        const result = abiInterface.decodeFunctionResult('quoteExactOutput', response.data.result);
+        const etaSwapFee = result.amountIn.mul(feeRate * 1000).div(1000);
+        const amountFrom = result.amountIn.mul(1000 + slippageTolerance * 1000 + feeRate * 1000).div(1000)
+
+        return {
+            amountFrom,
+            amountTo,
+            path: '0x' + path.join(''),
+            gasEstimate: result.gasEstimate,
+            etaSwapFee
+        };
     }
 }
