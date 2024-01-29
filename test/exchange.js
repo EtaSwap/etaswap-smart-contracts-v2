@@ -259,6 +259,83 @@ describe.only("Exchange", function () {
         }
     });
 
+    it("should be able to exchange exact tokens to tokens (indirect swap)", async function () {
+        for (const name of Object.keys(ORACLES)) {
+            await syncMirrorNode();
+            if (!ORACLES[name].validPair) {
+                console.warn(`Missing token pair for ${name}`);
+                continue;
+            }
+            const { tokenA, tokenB, tokenC, poolFee} = ORACLES[name].validTriple;
+            const [tokenABalanceBefore, tokenBBalanceBefore, tokenCBalanceBefore, tokenABalanceFeeBefore] = await Promise.all([
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenC
+                }),
+                hre.run('get-balance', {
+                    userAddress: feeAccount.id.toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+            ]);
+
+            const { amountFrom, amountTo, path, etaSwapFee } = await hre.run('get-quote', {
+                aggregatorId: [ORACLES[name].aggregatorId],
+                feeOnTransfer: false,
+                tokenA,
+                tokenB,
+                tokenC,
+                poolFee,
+            });
+            await hre.run("call-exchange", {
+                client,
+                clientAccount,
+                exchangeAddress,
+                tokenFrom: tokenA,
+                path,
+                amountFrom,
+                amountTo,
+                aggregatorId: ORACLES[name].aggregatorId,
+                feeOnTransfer: false,
+                gasLimit: GAS_LIMITS.exactTokenToToken + 75000,
+                isTokenFromHBAR: false,
+            });
+
+            const [tokenABalanceAfter, tokenBBalanceAfter, tokenCBalanceAfter, tokenABalanceFeeAfter] = await Promise.all([
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenC
+                }),
+                hre.run('get-balance', {
+                    userAddress: feeAccount.id.toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+            ]);
+
+            const gas = await getGas(GAS_LIMITS.HBARToExactToken + 75000, 3);
+            expect(tokenABalanceAfter).to.be.equal(tokenABalanceBefore.sub(amountFrom));
+            //assumption - tokenB is HBAR
+            expect(tokenBBalanceAfter).to.be.greaterThanOrEqual(tokenBBalanceBefore.sub(gas));
+            expect(tokenCBalanceAfter).to.be.greaterThan(tokenCBalanceBefore.add(amountTo));
+            expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(etaSwapFee)).abs()).to.be.lessThanOrEqual(100);
+        }
+    });
+
     it("should be able to exchange tokens to exact tokens", async function () {
         for (const name of Object.keys(ORACLES)) {
             await syncMirrorNode();
@@ -451,6 +528,85 @@ describe.only("Exchange", function () {
             expect(tokenBBalanceAfter).to.be.greaterThanOrEqual(tokenBBalanceBefore.sub(amountFrom));
             expect(tokenABalanceAfter).to.be.greaterThan(tokenABalanceBefore.add(amountTo).sub(gas));
             expect(tokenBBalanceFeeAfter.sub(tokenBBalanceFeeBefore.add(etaSwapFee)).abs()).to.be.lessThanOrEqual(100);
+        }
+    });
+
+    it("should be able to exchange tokens to exact tokens (indirect swap)", async function () {
+        for (const name of Object.keys(ORACLES)) {
+            await syncMirrorNode();
+            if (!ORACLES[name].validPair) {
+                console.warn(`Missing token pair for ${name}`);
+                continue;
+            }
+            const { tokenA, tokenB, tokenC, poolFee } = ORACLES[name].validTriple;
+
+            const [tokenABalanceBefore, tokenBBalanceBefore, tokenCBalanceBefore, tokenABalanceFeeBefore] = await Promise.all([
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenC
+                }),
+                hre.run('get-balance', {
+                    userAddress: feeAccount.id.toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+            ]);
+
+            const { amountFrom, amountTo, path, etaSwapFee } = await hre.run('get-quote', {
+                aggregatorId: [ORACLES[name].aggregatorId],
+                feeOnTransfer: true,
+                tokenA,
+                tokenB,
+                tokenC,
+                poolFee,
+            });
+            await hre.run("call-exchange", {
+                client,
+                clientAccount,
+                exchangeAddress,
+                tokenFrom: tokenA,
+                path,
+                amountFrom,
+                amountTo,
+                aggregatorId: ORACLES[name].aggregatorId,
+                feeOnTransfer: true,
+                gasLimit: GAS_LIMITS.tokenToExactToken + 75000,
+                isTokenFromHBAR: false,
+            });
+
+
+            const [tokenABalanceAfter, tokenBBalanceAfter, tokenCBalanceAfter, tokenABalanceFeeAfter] = await Promise.all([
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenB
+                }),
+                hre.run('get-balance', {
+                    userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                    tokenAddress: tokenC
+                }),
+                hre.run('get-balance', {
+                    userAddress: feeAccount.id.toSolidityAddress(),
+                    tokenAddress: tokenA
+                }),
+            ]);
+
+            const gas = await getGas(GAS_LIMITS.HBARToExactToken + 75000, 3);
+            expect(tokenABalanceAfter).to.be.greaterThan(tokenABalanceBefore.sub(amountFrom));
+            //assumption tokenB is HBAR
+            expect(tokenBBalanceAfter).to.be.greaterThanOrEqual(tokenBBalanceBefore.sub(gas));
+            expect(tokenCBalanceAfter).to.be.equal(tokenCBalanceBefore.add(amountTo));
+            expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(etaSwapFee)).abs()).to.be.lessThanOrEqual(100);
         }
     });
 

@@ -35,13 +35,18 @@ module.exports = {
 
         return { amountFrom, amountTo, path };
     },
-    SaucerSwapV2: async ({ tokenA, tokenB, poolFee }) => {
+    SaucerSwapV2: async ({ tokenA, tokenB, tokenC, poolFee }) => {
         const abiInterface = new hre.ethers.utils.Interface(SaucerSwapV2QuoterAbi);
         const path = [
             tokenA.substring(2),
             poolFee.toString(16).padStart(6, '0'),
             tokenB.substring(2),
         ];
+
+        if (tokenC) {
+            path.push(poolFee.toString(16).padStart(6, '0'));
+            path.push(tokenC.substring(2));
+        }
 
         const encodedPath = Uint8Array.from(Buffer.from(path.join(''), 'hex'));
         const amountFrom = hre.ethers.BigNumber.from(10000);
@@ -68,13 +73,18 @@ module.exports = {
             etaSwapFee
         };
     },
-    SaucerSwapV2FeeOnTransfer: async ({ tokenA, tokenB, poolFee }) => {
+    SaucerSwapV2FeeOnTransfer: async ({ tokenA, tokenB, tokenC, poolFee }) => {
         const abiInterface = new hre.ethers.utils.Interface(SaucerSwapV2QuoterAbi);
         const path = [
             tokenB.substring(2),
             poolFee.toString(16).padStart(6, '0'),
             tokenA.substring(2),
         ];
+
+        if (tokenC) {
+            path.unshift(poolFee.toString(16).padStart(6, '0'));
+            path.unshift(tokenC.substring(2));
+        }
 
         const encodedPath = Uint8Array.from(Buffer.from(path.join(''), 'hex'));
         const amountTo = hre.ethers.BigNumber.from(10000);
