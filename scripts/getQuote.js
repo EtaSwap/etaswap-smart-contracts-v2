@@ -1,7 +1,9 @@
 const hre = require('hardhat');
 const { ORACLES } = require('../test/constants');
+const UniswapV2QuoterAbi = require('../test/helpers/UniswapV2Quoter.json');
 const SaucerSwapV2QuoterAbi = require('../test/helpers/SaucerSwapV2Quoter.json');
 const axios = require('axios');
+const { ethers } = require('hardhat');
 
 let feeRate = 0.005;
 const slippageTolerance = 0.003;
@@ -21,19 +23,47 @@ module.exports = {
 
         return { amountFrom, amountTo, path };
     },
-    SaucerSwap: ({ tokenA, tokenB }) => {
-        const { rate } = hre.run('get-rate-oracle', {
-            name,
-            address: ORACLES['SaucerSwapOracle'].address,
-            tokenA,
-            tokenB,
-        });
+    SaucerSwap: async ({ tokenA, tokenB, tokenC }) => {
+        const path = [tokenA, tokenB];
+        if (tokenC) {
+            path.push(tokenC);
+        }
+
         const amountFrom = hre.ethers.BigNumber.from(10000);
-        const amountTo = amountFrom.mul(rate).div(hre.ethers.BigNumber.from(10).pow(18)).mul(1000 - slippageTolerance * 1000 - feeRate * 1000).div(1000);
+        const etaSwapFee = amountFrom.mul(feeRate * 1000).div(1000);
+        const wallet = (await hre.ethers.getSigners())[0];
+        const abiInterfaces = new hre.ethers.utils.Interface(UniswapV2QuoterAbi);
+        const routerContract = new hre.ethers.Contract(ORACLES.SaucerSwapOracle.router, abiInterfaces.fragments, wallet);
+        const result = await routerContract.getAmountsOut(amountFrom.sub(etaSwapFee), path);
+        const amountTo = result[result.length - 1].mul(1000 - slippageTolerance * 1000 - feeRate * 1000).div(1000);
 
-        const path = hre.ethers.utils.defaultAbiCoder.encode(['address', 'address'], [tokenA, tokenB]);
+        return {
+            amountFrom,
+            amountTo,
+            path: path.reduce((acc, address) => acc + address.substring(2), '0x'),
+            etaSwapFee,
+        };
+    },
+    SaucerSwapFeeOnTransfer: async ({ tokenA, tokenB, tokenC }) => {
+        const path = [tokenB, tokenA];
+        if (tokenC) {
+            path.unshift(tokenC);
+        }
 
-        return { amountFrom, amountTo, path };
+        const amountTo = hre.ethers.BigNumber.from(10000);
+        const wallet = (await hre.ethers.getSigners())[0];
+        const abiInterfaces = new hre.ethers.utils.Interface(UniswapV2QuoterAbi);
+        const routerContract = new hre.ethers.Contract(ORACLES.SaucerSwapOracle.router, abiInterfaces.fragments, wallet);
+        const result = await routerContract.getAmountsIn(amountTo, path.slice().reverse());
+        const etaSwapFee = result[0].mul(feeRate * 1000).div(1000);
+        const amountFrom = result[0].mul(1000 + slippageTolerance * 1000 + feeRate * 1000).div(1000);
+
+        return {
+            amountFrom,
+            amountTo,
+            path: path.reduce((acc, address) => acc + address.substring(2), '0x'),
+            etaSwapFee,
+        };
     },
     SaucerSwapV2: async ({ tokenA, tokenB, tokenC, poolFee }) => {
         const abiInterface = new hre.ethers.utils.Interface(SaucerSwapV2QuoterAbi);
@@ -58,7 +88,7 @@ module.exports = {
         const data = {
             'block': 'latest',
             'data': encodedData,
-            'to': ORACLES['SaucerSwapV2Oracle'].address,
+            'to': ORACLES.SaucerSwapV2Oracle.address,
         };
 
         const response = await axios.post(url, data, { headers: { 'content-type': 'application/json' } });
@@ -95,7 +125,7 @@ module.exports = {
         const data = {
             'block': 'latest',
             'data': encodedData,
-            'to': ORACLES['SaucerSwapV2Oracle'].address,
+            'to': ORACLES.SaucerSwapV2Oracle.address,
         };
 
         const response = await axios.post(url, data, { headers: { 'content-type': 'application/json' } });

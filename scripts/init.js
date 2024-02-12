@@ -41,6 +41,11 @@ const init = async () => {
 
     feeAccount.id = accountId;
     feeAccount.privateKey = privateKey;
+
+    //Temporary while testnet hedera account service not working property
+    // feeAccount.id = AccountId.fromString('0.0.3249828');
+    // feeAccount.privateKey = PrivateKey.fromString('302e020100300506032b6570042204204337c531adafdec03f1416c61f767a173c39d248b93c22c7b26939ba59b1d31f');
+
     console.log(`Fee account init: ${feeAccount.id}, ${feeAccount.privateKey}`);
 
     const signers = await hre.ethers.getSigners();

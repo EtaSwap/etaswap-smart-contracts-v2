@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../interfaces/IUniswapV2Router02.sol";
 import "../interfaces/IAdapter.sol";
 import "../interfaces/IWHBAR.sol";
+import "../libraries/Path.sol";
 
 contract SaucerSwapAdapter is Ownable, IAdapter {
     using SafeERC20 for IERC20;
@@ -21,6 +22,8 @@ contract SaucerSwapAdapter is Ownable, IAdapter {
     uint8 public feePromille;
     IERC20 public whbarToken;
     IWHBAR public whbarContract;
+
+    event DEBUG(IERC20 indexed a, IERC20 indexed b, IERC20 indexed c);
 
     constructor(address payable _feeWallet, IUniswapV2Router02 _router, uint8 _feePromille, IERC20 _whbarToken, IWHBAR _whbarContract) public {
         feeWallet = _feeWallet;
@@ -50,80 +53,74 @@ contract SaucerSwapAdapter is Ownable, IAdapter {
         uint256 deadline,
         bool feeOnTransfer
     ) external payable {
-        (IERC20 tokenFrom, IERC20 tokenTo) = abi.decode(path, (IERC20, IERC20));
+        address[] memory pathDecode = Path.getAllAddresses(path, feeOnTransfer);
+        IERC20 tokenFrom = IERC20(pathDecode[0]);
+        IERC20 tokenTo = IERC20(pathDecode[pathDecode.length - 1]);
         require(tokenFrom != tokenTo, "EtaSwap: TOKEN_PAIR_INVALID");
 
         uint256 fee = (tokenFrom == whbarToken ? msg.value : amountFrom) * feePromille / 1000;
         _transfer(tokenFrom, fee, feeWallet);
 
-        address[] memory pathDecode = new address[](2);
-        pathDecode[0] = address(tokenFrom);
-        pathDecode[1] = address(tokenTo);
-
         uint256 amountFromWithoutFee = (tokenFrom == whbarToken ? msg.value : amountFrom) - fee;
 
+        uint256[] memory amounts;
         if (feeOnTransfer) {
             if (tokenFrom == whbarToken) {
-                 uint[] memory amounts = router.swapETHForExactTokens{value: amountFromWithoutFee}(
+                 amounts = router.swapETHForExactTokens{value: amountFromWithoutFee}(
                     amountTo,
                     pathDecode,
                     address(this),
                     deadline
                 );
-                _transfer(tokenTo, amounts[1], recipient);
-                _transfer(tokenFrom, amountFromWithoutFee - amounts[0], recipient);
             } else if (tokenTo == whbarToken) {
                 _approveSpender(tokenFrom, address(router), amountFromWithoutFee);
-                uint[] memory amounts = router.swapTokensForExactETH(
+                amounts = router.swapTokensForExactETH(
                     amountTo,
                     amountFromWithoutFee,
                     pathDecode,
                     address(this),
                     deadline
                 );
-                _transfer(tokenTo, amounts[1], recipient);
-                _transfer(tokenFrom, amountFromWithoutFee - amounts[0], recipient);
             } else {
                 _approveSpender(tokenFrom, address(router), amountFromWithoutFee);
-                uint[] memory amounts = router.swapTokensForExactTokens(
+                amounts = router.swapTokensForExactTokens(
                     amountTo,
                     amountFromWithoutFee,
                     pathDecode,
                     address(this),
                     deadline
                 );
-                _transfer(tokenTo, amounts[1], recipient);
-                _transfer(tokenFrom, amountFromWithoutFee - amounts[0], recipient);
             }
+            _transfer(tokenTo, amounts[amounts.length - 1], recipient);
+            _transfer(tokenFrom, amountFromWithoutFee - amounts[0], recipient);
         } else {
-            uint256 amountToReturn = 0;
             if (tokenFrom == whbarToken) {
-                amountToReturn = router.swapExactETHForTokens{value: amountFromWithoutFee}(
+                amounts = router.swapExactETHForTokens{value: amountFromWithoutFee}(
                     amountTo,
                     pathDecode,
                     address(this),
                     deadline
-                )[1];
+                );
             } else if (tokenTo == whbarToken) {
                 _approveSpender(tokenFrom, address(router), amountFromWithoutFee);
-                amountToReturn = router.swapExactTokensForETH(
+                amounts = router.swapExactTokensForETH(
                     amountFromWithoutFee,
                     amountTo,
                     pathDecode,
                     address(this),
                     deadline
-                )[1];
+                );
             } else {
                 _approveSpender(tokenFrom, address(router), amountFromWithoutFee);
-                amountToReturn = router.swapExactTokensForTokens(
+                amounts = router.swapExactTokensForTokens(
                     amountFromWithoutFee,
                     amountTo,
                     pathDecode,
                     address(this),
                     deadline
-                )[1];
+                );
             }
-            _transfer(tokenTo, amountToReturn, recipient);
+            _transfer(tokenTo, amounts[amounts.length - 1], recipient);
         }
     }
 

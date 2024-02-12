@@ -4,7 +4,7 @@ const { Client, TokenAssociateTransaction, PrivateKey } = require('@hashgraph/sd
 module.exports = async ({ name, address, tokenA, tokenB }) => {
   const wallet = (await ethers.getSigners())[0];
 
-  const oracle = await hre.ethers.getContractAt(name, address, wallet);
+  const oracle = await ethers.getContractAt(name, address, wallet);
   return oracle.getRate(tokenA, tokenB);
 };
 

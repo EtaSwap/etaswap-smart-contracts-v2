@@ -89,6 +89,7 @@ module.exports = async ({ client, clientAccount, feeAccount, adapters }) => {
     console.log(`Exchange associated to all tokens.`)
 
     //Associate fee wallet to all tokens
+    /*
     for (let i = 0; i < allTokensToAssociate.length; i += chunkSize) {
         const chunk = allTokensToAssociate.slice(i, i + chunkSize);
         const assocFeeTx = await new TokenAssociateTransaction()
@@ -99,7 +100,7 @@ module.exports = async ({ client, clientAccount, feeAccount, adapters }) => {
         const assocFeeRes = await assocFeeSign.execute(client);
         await assocFeeRes.getReceipt(client);
     }
-    console.log('Fee account associated to all tokens.');
+    console.log('Fee account associated to all tokens.');*/
 
     return { contractAddress: exchangeAddress };
 };

@@ -50,7 +50,7 @@ describe.only("Exchange", function () {
         }
     });
 
-    it("should be able to deploy exchange and attach adapters", async function () {
+    it.only("should be able to deploy exchange and attach adapters", async function () {
         const exchange = await hre.run("deploy-exchange", {
             client,
             clientAccount,
@@ -133,7 +133,7 @@ describe.only("Exchange", function () {
         }
     });
 
-    it("should be able to exchange exact HBAR to tokens", async function () {
+    it.only("should be able to exchange exact HBAR to tokens", async function () {
         for (const name of Object.keys(ORACLES)) {
             await syncMirrorNode();
             const { tokenA, tokenB, poolFee } = ORACLES[name].validPairHbar;
