@@ -23,8 +23,6 @@ contract SaucerSwapAdapter is Ownable, IAdapter {
     IERC20 public whbarToken;
     IWHBAR public whbarContract;
 
-    event DEBUG(IERC20 indexed a, IERC20 indexed b, IERC20 indexed c);
-
     constructor(address payable _feeWallet, IUniswapV2Router02 _router, uint8 _feePromille, IERC20 _whbarToken, IWHBAR _whbarContract) public {
         feeWallet = _feeWallet;
         router = _router;

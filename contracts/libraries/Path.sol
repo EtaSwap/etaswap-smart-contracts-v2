@@ -25,15 +25,6 @@ library Path {
         uint256 numAddresses = data.length / 20;
         address[] memory addresses = new address[](numAddresses);
 
-//        assembly {
-//            let startPos := add(data, 20)
-//            for { let i := 0 } lt(i, numAddresses) { i := add(i, 1) } {
-//                let addrPos := add(startPos, mul(i, 20))
-//                let extractedAddress := mload(addrPos)
-//                mstore(add(addresses, mul(add(i, 1), 32)), extractedAddress)
-//            }
-//        }
-
         assembly {
             if not(reverse) {
                 let startPos := add(data, 20)

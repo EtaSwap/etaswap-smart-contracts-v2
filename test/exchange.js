@@ -50,7 +50,7 @@ describe.only("Exchange", function () {
         }
     });
 
-    it.only("should be able to deploy exchange and attach adapters", async function () {
+    it("should be able to deploy exchange and attach adapters", async function () {
         const exchange = await hre.run("deploy-exchange", {
             client,
             clientAccount,
@@ -133,7 +133,7 @@ describe.only("Exchange", function () {
         }
     });
 
-    it.only("should be able to exchange exact HBAR to tokens", async function () {
+    it("should be able to exchange exact HBAR to tokens", async function () {
         for (const name of Object.keys(ORACLES)) {
             await syncMirrorNode();
             const { tokenA, tokenB, poolFee } = ORACLES[name].validPairHbar;
@@ -262,8 +262,8 @@ describe.only("Exchange", function () {
     it("should be able to exchange exact tokens to tokens (indirect swap)", async function () {
         for (const name of Object.keys(ORACLES)) {
             await syncMirrorNode();
-            if (!ORACLES[name].validPair) {
-                console.warn(`Missing token pair for ${name}`);
+            if (!ORACLES[name].validTriple) {
+                console.warn(`Missing token triple for ${name}`);
                 continue;
             }
             const { tokenA, tokenB, tokenC, poolFee} = ORACLES[name].validTriple;
@@ -534,8 +534,8 @@ describe.only("Exchange", function () {
     it("should be able to exchange tokens to exact tokens (indirect swap)", async function () {
         for (const name of Object.keys(ORACLES)) {
             await syncMirrorNode();
-            if (!ORACLES[name].validPair) {
-                console.warn(`Missing token pair for ${name}`);
+            if (!ORACLES[name].validTriple) {
+                console.warn(`Missing token triple for ${name}`);
                 continue;
             }
             const { tokenA, tokenB, tokenC, poolFee } = ORACLES[name].validTriple;

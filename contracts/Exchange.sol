@@ -18,8 +18,6 @@ import "./libraries/Path.sol";
  * @title Exchange
  */
 contract Exchange is Ownable, Pausable, ReentrancyGuard, IExchange {
-    IERC20 private constant hbar = IERC20(0x0000000000000000000000000000000000000000);
-
     using SafeERC20 for IERC20;
     using Address for address;
     using Address for address payable;
@@ -33,7 +31,14 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard, IExchange {
         address indexed addr
     );
     event AdapterRemoved(string indexed aggregatorId);
-    event Swap(string indexed aggregatorId, address indexed sender);
+    event Swap(
+        string indexed aggregatorId,
+        IERC20 indexed tokenFrom,
+        IERC20 indexed tokenTo,
+        uint256 amountFrom,
+        uint256 amountTo,
+        address sender
+    );
 
     /**
      * @dev Sets the adapter for an aggregator. It can't be changed later.
@@ -104,9 +109,10 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard, IExchange {
     ) internal {
         address adapter = adapters[aggregatorId];
 
+        IERC20 tokenFrom = feeOnTransfer ? Path.getLastAddress(path) : Path.getFirstAddress(path);
+        IERC20 tokenTo = feeOnTransfer ? Path.getFirstAddress(path) : Path.getLastAddress(path);
         if (!isTokenFromHBAR) {
-            IERC20 token = feeOnTransfer ? Path.getLastAddress(path) : Path.getFirstAddress(path);
-            token.safeTransferFrom(msg.sender, adapter, amountFrom);
+            tokenFrom.safeTransferFrom(msg.sender, adapter, amountFrom);
         }
 
         IAdapter(adapter).swap{value: msg.value}(
@@ -118,6 +124,13 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard, IExchange {
             feeOnTransfer
         );
 
-        emit Swap(aggregatorId, msg.sender);
+        emit Swap(
+            aggregatorId,
+            tokenFrom,
+            tokenTo,
+            amountFrom,
+            amountTo,
+            msg.sender
+        );
     }
 }

@@ -1,42 +1,41 @@
 const { ethers } = require('hardhat');
 
 const ORACLES = {
-    /*SaucerSwapV2Oracle: {
-        factory: '0x00000000000000000000000000000000002ecbd1',
+    SaucerSwapV2Oracle: {
+        factory: '0x00000000000000000000000000000000001243ee',
         validPair: {
-            tokenA: '0x0000000000000000000000000000000000022ed0',
-            tokenAName: 'AAA',
-            tokenB: '0x0000000000000000000000000000000000022ed7',
-            tokenBName: 'BBB',
-            poolFee: 1500,
+            tokenA: '0x0000000000000000000000000000000000001599',
+            tokenAName: 'DAI',
+            tokenB: '0x0000000000000000000000000000000000001549',
+            tokenBName: 'USDC',
+            poolFee: 500,
         },
         validPairHbar: {
-            tokenA: '0x000000000000000000000000000000000000e6a2',
+            tokenA: '0x0000000000000000000000000000000000003ad2',
             tokenAName: 'HBAR',
-            tokenB: '0x000000000000000000000000000000000000ef52',
+            tokenB: '0x0000000000000000000000000000000000120f46',
             tokenBName: 'SAUCE',
             poolFee: 3000,
         },
-        validTriple: {
-            tokenA: '0x000000000000000000000000000000000000ef52',
-            tokenAName: 'SAUCE',
-            tokenB: '0x000000000000000000000000000000000000e6a2',
-            tokenBName: 'HBAR',
-            tokenC: '0x0000000000000000000000000000000000022ed7',
-            tokenCName: 'BBB',
-            poolFee: 3000,
-        },
-        address: '0x0000000000000000000000000000000000306916',
-        router: '0x0000000000000000000000000000000000306972',
+        // validTriple: {
+        //     tokenA: '0x0000000000000000000000000000000000120f46',
+        //     tokenAName: 'SAUCE',
+        //     tokenB: '0x0000000000000000000000000000000000003ad2',
+        //     tokenBName: 'HBAR',
+        //     tokenC: '0x0000000000000000000000000000000000022ed7',
+        //     tokenCName: 'BBB',
+        //     poolFee: 3000,
+        // },
+        address: '0x00000000000000000000000000000000001535b2',
+        router: '0x0000000000000000000000000000000000159398',
         aggregatorId: 'SaucerSwapV2',
         tokensToAssociate: [
-            ['0.0.58850', '0.0.59042', '0.0.61266', '0.0.117947', '0.0.143056'],
-            ['0.0.143063', '0.0.447892', '0.0.447893', '0.0.447894', '0.0.447895']
+            ['0.0.15058', '0.0.2231533', '0.0.1183558', '0.0.5529', '0.0.5449'],
         ],
-        whbarToken: '0x000000000000000000000000000000000000e6a2',
-        whbarContract: '0x000000000000000000000000000000000000e6a1',
+        whbarToken: '0x0000000000000000000000000000000000003ad2',
+        whbarContract: '0x0000000000000000000000000000000000003ad1',
         adapterContract: 'SaucerSwapV2Adapter',
-    },*/
+    },
     SaucerSwapOracle: {
         factory: '0x000000000000000000000000000000000000e0c9',
         validPair: {
@@ -61,7 +60,7 @@ const ORACLES = {
         },
         address: '0xE99c8D7ee2925548a7263aF061E59aA487d22fDe',
         router: '0x0000000000000000000000000000000000004b40',
-        aggregatorId: 'SaucerSwap',
+        aggregatorId: 'SaucerSwapV1',
         tokensToAssociate: [
             ['0.0.15058', '0.0.2231533', '0.0.1183558', '0.0.5529', '0.0.5449'],
         ],

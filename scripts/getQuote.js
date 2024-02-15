@@ -23,7 +23,7 @@ module.exports = {
 
         return { amountFrom, amountTo, path };
     },
-    SaucerSwap: async ({ tokenA, tokenB, tokenC }) => {
+    SaucerSwapV1: async ({ tokenA, tokenB, tokenC }) => {
         const path = [tokenA, tokenB];
         if (tokenC) {
             path.push(tokenC);
@@ -44,7 +44,7 @@ module.exports = {
             etaSwapFee,
         };
     },
-    SaucerSwapFeeOnTransfer: async ({ tokenA, tokenB, tokenC }) => {
+    SaucerSwapV1FeeOnTransfer: async ({ tokenA, tokenB, tokenC }) => {
         const path = [tokenB, tokenA];
         if (tokenC) {
             path.unshift(tokenC);
