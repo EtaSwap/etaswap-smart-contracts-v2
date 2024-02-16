@@ -87,8 +87,45 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard, IExchange {
         bool feeOnTransfer
     ) external payable whenNotPaused nonReentrant {
         require(adapters[aggregatorId] != address(0), "EtaSwap: ADAPTER_DOES_NOT_EXIST");
-        _swap(aggregatorId, path, amountFrom, amountTo, deadline, isTokenFromHBAR, feeOnTransfer);
+
+        _swap(
+            aggregatorId,
+            path,
+            amountFrom,
+            amountTo,
+            deadline,
+            isTokenFromHBAR,
+            feeOnTransfer
+        );
     }
+
+    /**
+     * @dev Performs a transactional split swap
+     * @param aggregatorIds Identifiers of the aggregators to be used for the swap
+     */
+    function splitSwap(
+        string[] calldata aggregatorIds,
+        bytes[] calldata paths,
+        uint256[] calldata amountsFrom,
+        uint256[] calldata amountsTo,
+        uint256 deadline,
+        bool isTokenFromHBAR,
+        bool feeOnTransfer
+    ) external payable whenNotPaused nonReentrant {
+        for (uint8 i = 0; i < aggregatorIds.length; i++) {
+            require(adapters[aggregatorIds[i]] != address(0), "EtaSwap: ADAPTER_DOES_NOT_EXIST");
+            _swap(
+                aggregatorIds[i],
+                paths[i],
+                amountsFrom[i],
+                amountsTo[i],
+                deadline,
+                isTokenFromHBAR,
+                feeOnTransfer
+            );
+        }
+    }
+
 
     function pauseSwaps() external onlyOwner {
         _pause();
@@ -108,14 +145,14 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard, IExchange {
         bool feeOnTransfer
     ) internal {
         address adapter = adapters[aggregatorId];
-
         IERC20 tokenFrom = feeOnTransfer ? Path.getLastAddress(path) : Path.getFirstAddress(path);
         IERC20 tokenTo = feeOnTransfer ? Path.getFirstAddress(path) : Path.getLastAddress(path);
+
         if (!isTokenFromHBAR) {
             tokenFrom.safeTransferFrom(msg.sender, adapter, amountFrom);
         }
 
-        IAdapter(adapter).swap{value: msg.value}(
+        IAdapter(adapter).swap{value: isTokenFromHBAR ? amountFrom : 0}(
             payable(msg.sender),
             path,
             amountFrom,

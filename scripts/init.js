@@ -43,8 +43,8 @@ const init = async () => {
     feeAccount.privateKey = privateKey;
 
     //Temporary while testnet hedera account service not working property
-    // feeAccount.id = AccountId.fromString('0.0.3249828');
-    // feeAccount.privateKey = PrivateKey.fromString('302e020100300506032b6570042204204337c531adafdec03f1416c61f767a173c39d248b93c22c7b26939ba59b1d31f');
+    // feeAccount.id = AccountId.fromString('0.0.3551353');
+    // feeAccount.privateKey = PrivateKey.fromString('302e020100300506032b65700422042052a66aa67912df6406a3f5a055a5dfaf24fcf774159c057b88cfe757c67a5204');
 
     console.log(`Fee account init: ${feeAccount.id}, ${feeAccount.privateKey}`);
 

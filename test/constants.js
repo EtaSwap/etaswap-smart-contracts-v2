@@ -47,8 +47,9 @@ const ORACLES = {
         validPairHbar: {
             tokenA: '0x0000000000000000000000000000000000003ad2',
             tokenAName: 'HBAR',
-            tokenB: '0x0000000000000000000000000000000000001599',
-            tokenBName: 'DAI',
+            tokenB: '0x0000000000000000000000000000000000120f46',
+            tokenBName: 'SAUCE',
+            poolFee: 3000,
         },
         validTriple: {
             tokenA: '0x0000000000000000000000000000000000120f46',

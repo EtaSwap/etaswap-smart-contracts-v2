@@ -51,6 +51,12 @@ task("call-exchange", async (taskArgs) => {
   return callExchange(taskArgs);
 });
 
+task("call-split-swap-exchange", async (taskArgs) => {
+  const callSplitSwapExchange = require("./scripts/callSplitSwapExchange");
+  return callSplitSwapExchange(taskArgs);
+});
+
+
 task('set-adapter-fee', async (taskArgs) => {
   const setAdapterFee= require("./scripts/setAdapterFee");
   return setAdapterFee(taskArgs);

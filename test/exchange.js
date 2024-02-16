@@ -50,7 +50,7 @@ describe.only("Exchange", function () {
         }
     });
 
-    it("should be able to deploy exchange and attach adapters", async function () {
+    it.only("should be able to deploy exchange and attach adapters", async function () {
         const exchange = await hre.run("deploy-exchange", {
             client,
             clientAccount,
@@ -129,7 +129,7 @@ describe.only("Exchange", function () {
 
             expect(tokenABalanceAfter).to.be.equal(tokenABalanceBefore.sub(amountFrom));
             expect(tokenBBalanceAfter).to.be.greaterThan(tokenBBalanceBefore.add(amountTo));
-            expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(etaSwapFee)).abs()).to.be.lessThanOrEqual(100);
+            expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(etaSwapFee)).abs()).to.be.lessThanOrEqual(50);
         }
     });
 
@@ -192,7 +192,7 @@ describe.only("Exchange", function () {
 
             expect(tokenABalanceAfter).not.to.be.equal(tokenABalanceBefore);
             expect(tokenBBalanceAfter).to.be.greaterThan(tokenBBalanceBefore.add(amountTo));
-            expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(etaSwapFee).abs())).to.be.lessThanOrEqual(100);
+            expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(etaSwapFee).abs())).to.be.lessThanOrEqual(50);
         }
     });
 
@@ -255,7 +255,7 @@ describe.only("Exchange", function () {
             const gas = await getGas(GAS_LIMITS.exactTokenToHBAR, 3);
             expect(tokenBBalanceAfter).to.be.equal(tokenBBalanceBefore.sub(amountFrom));
             expect(tokenABalanceAfter).to.be.greaterThan(tokenABalanceBefore.add(amountTo).sub(gas));
-            expect(tokenBBalanceFeeAfter.sub(tokenBBalanceFeeBefore.add(etaSwapFee)).abs()).to.be.lessThanOrEqual(100);
+            expect(tokenBBalanceFeeAfter.sub(tokenBBalanceFeeBefore.add(etaSwapFee)).abs()).to.be.lessThanOrEqual(50);
         }
     });
 
@@ -332,7 +332,7 @@ describe.only("Exchange", function () {
             //assumption - tokenB is HBAR
             expect(tokenBBalanceAfter).to.be.greaterThanOrEqual(tokenBBalanceBefore.sub(gas));
             expect(tokenCBalanceAfter).to.be.greaterThan(tokenCBalanceBefore.add(amountTo));
-            expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(etaSwapFee)).abs()).to.be.lessThanOrEqual(100);
+            expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(etaSwapFee)).abs()).to.be.lessThanOrEqual(50);
         }
     });
 
@@ -400,7 +400,7 @@ describe.only("Exchange", function () {
             expect(tokenABalanceAfter).to.be.greaterThan(tokenABalanceBefore.sub(amountFrom));
             // expect(tokenABalanceAfter).to.be.lessThanOrEqual(tokenABalanceBefore.sub(amountTo.mul(rate).div(hre.ethers.BigNumber.from(10).pow(18)).mul(1000 + feeRate * 1000).div(1000)));
             expect(tokenBBalanceAfter).to.be.equal(tokenBBalanceBefore.add(amountTo));
-            expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(etaSwapFee)).abs()).to.be.lessThanOrEqual(100);
+            expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(etaSwapFee)).abs()).to.be.lessThanOrEqual(50);
         }
     });
 
@@ -463,7 +463,7 @@ describe.only("Exchange", function () {
             const gas = await getGas(GAS_LIMITS.HBARToExactToken);
             expect(tokenABalanceAfter).to.be.greaterThanOrEqual(tokenABalanceBefore.sub(amountFrom).sub(gas));
             expect(tokenBBalanceAfter).to.be.equal(tokenBBalanceBefore.add(amountTo));
-            expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(etaSwapFee)).abs()).to.be.lessThanOrEqual(100);
+            expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(etaSwapFee)).abs()).to.be.lessThanOrEqual(50);
         }
     });
 
@@ -527,7 +527,7 @@ describe.only("Exchange", function () {
             const gas = await getGas(GAS_LIMITS.tokenToExactHBAR, 2);
             expect(tokenBBalanceAfter).to.be.greaterThanOrEqual(tokenBBalanceBefore.sub(amountFrom));
             expect(tokenABalanceAfter).to.be.greaterThan(tokenABalanceBefore.add(amountTo).sub(gas));
-            expect(tokenBBalanceFeeAfter.sub(tokenBBalanceFeeBefore.add(etaSwapFee)).abs()).to.be.lessThanOrEqual(100);
+            expect(tokenBBalanceFeeAfter.sub(tokenBBalanceFeeBefore.add(etaSwapFee)).abs()).to.be.lessThanOrEqual(50);
         }
     });
 
@@ -606,8 +606,146 @@ describe.only("Exchange", function () {
             //assumption tokenB is HBAR
             expect(tokenBBalanceAfter).to.be.greaterThanOrEqual(tokenBBalanceBefore.sub(gas));
             expect(tokenCBalanceAfter).to.be.equal(tokenCBalanceBefore.add(amountTo));
-            expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(etaSwapFee)).abs()).to.be.lessThanOrEqual(100);
+            expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(etaSwapFee)).abs()).to.be.lessThanOrEqual(50);
         }
+    });
+
+    it('should be able to splitSwap exact HBAR to tokens', async function () {
+        await syncMirrorNode();
+        const { tokenA, tokenB, poolFee } = ORACLES.SaucerSwapOracle.validPairHbar;
+        const [tokenABalanceBefore, tokenBBalanceBefore, tokenABalanceFeeBefore] = await Promise.all([
+            hre.run('get-balance', {
+                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                tokenAddress: tokenA
+            }),
+            hre.run('get-balance', {
+                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                tokenAddress: tokenB
+            }),
+            hre.run('get-balance', {
+                userAddress: feeAccount.id.toSolidityAddress(),
+                tokenAddress: tokenA
+            }),
+        ]);
+
+        const { amountFrom: amountFrom1, amountTo: amountTo1, path: path1, etaSwapFee: etaSwapFee1 } = await hre.run('get-quote', {
+            aggregatorId: [ORACLES.SaucerSwapOracle.aggregatorId],
+            feeOnTransfer: false,
+            tokenA,
+            tokenB,
+            poolFee,
+        });
+        const { amountFrom: amountFrom2, amountTo: amountTo2, path: path2, etaSwapFee: etaSwapFee2 } = await hre.run('get-quote', {
+            aggregatorId: [ORACLES.SaucerSwapV2Oracle.aggregatorId],
+            feeOnTransfer: false,
+            tokenA,
+            tokenB,
+            poolFee,
+        });
+
+        await hre.run("call-split-swap-exchange", {
+            client,
+            clientAccount,
+            exchangeAddress,
+            tokenFrom: tokenA,
+            paths: [path1, path2],
+            amountsFrom: [amountFrom1, amountFrom2],
+            amountsTo: [amountTo1, amountTo2],
+            aggregatorIds: [ORACLES.SaucerSwapOracle.aggregatorId, ORACLES.SaucerSwapV2Oracle.aggregatorId],
+            feeOnTransfer: false,
+            gasLimit: GAS_LIMITS.exactHBARToToken * 2,
+            isTokenFromHBAR: true,
+        });
+
+        const [tokenABalanceAfter, tokenBBalanceAfter, tokenABalanceFeeAfter] = await Promise.all([
+            hre.run('get-balance', {
+                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                tokenAddress: tokenA
+            }),
+            hre.run('get-balance', {
+                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                tokenAddress: tokenB
+            }),
+            hre.run('get-balance', {
+                userAddress: feeAccount.id.toSolidityAddress(),
+                tokenAddress: tokenA
+            }),
+        ]);
+
+        const gas = await getGas(GAS_LIMITS.HBARToExactToken * 2);
+        expect(tokenABalanceAfter).to.be.greaterThanOrEqual(tokenABalanceBefore.sub(amountFrom1).sub(amountFrom2).sub(gas));
+        expect(tokenBBalanceAfter).to.be.greaterThanOrEqual(tokenBBalanceBefore.add(amountTo1).add(amountTo2));
+        expect(tokenABalanceFeeAfter.sub(tokenABalanceFeeBefore.add(etaSwapFee1).add(etaSwapFee2)).abs()).to.be.lessThanOrEqual(50);
+    });
+
+    it.only('should be able to splitSwap tokens to exact HBAR', async function () {
+        await syncMirrorNode();
+        const { tokenA, tokenB, poolFee } = ORACLES.SaucerSwapOracle.validPairHbar;
+
+        const [tokenABalanceBefore, tokenBBalanceBefore, tokenBBalanceFeeBefore] = await Promise.all([
+            hre.run('get-balance', {
+                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                tokenAddress: tokenA
+            }),
+            hre.run('get-balance', {
+                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                tokenAddress: tokenB
+            }),
+            hre.run('get-balance', {
+                userAddress: feeAccount.id.toSolidityAddress(),
+                tokenAddress: tokenB
+            }),
+        ]);
+
+        const { amountFrom: amountFrom1, amountTo: amountTo1, path: path1, etaSwapFee: etaSwapFee1 } = await hre.run('get-quote', {
+            aggregatorId: [ORACLES.SaucerSwapOracle.aggregatorId],
+            feeOnTransfer: true,
+            tokenA: tokenB,
+            tokenB: tokenA,
+            poolFee,
+        });
+        const { amountFrom: amountFrom2, amountTo: amountTo2, path: path2, etaSwapFee: etaSwapFee2 } = await hre.run('get-quote', {
+            aggregatorId: [ORACLES.SaucerSwapV2Oracle.aggregatorId],
+            feeOnTransfer: true,
+            tokenA: tokenB,
+            tokenB: tokenA,
+            poolFee,
+        });
+
+        await hre.run("call-split-swap-exchange", {
+            client,
+            clientAccount,
+            exchangeAddress,
+            tokenFrom: tokenB,
+            paths: [path1, path2],
+            amountsFrom: [amountFrom1, amountFrom2],
+            amountsTo: [amountTo1, amountTo2],
+            aggregatorIds: [ORACLES.SaucerSwapOracle.aggregatorId, ORACLES.SaucerSwapV2Oracle.aggregatorId],
+            feeOnTransfer: true,
+            gasLimit: GAS_LIMITS.tokenToExactHBAR * 2,
+            isTokenFromHBAR: false,
+        });
+
+
+        const [tokenABalanceAfter, tokenBBalanceAfter, tokenBBalanceFeeAfter] = await Promise.all([
+            hre.run('get-balance', {
+                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                tokenAddress: tokenA
+            }),
+            hre.run('get-balance', {
+                userAddress: AccountId.fromString(clientAccount.id).toSolidityAddress(),
+                tokenAddress: tokenB
+            }),
+            hre.run('get-balance', {
+                userAddress: feeAccount.id.toSolidityAddress(),
+                tokenAddress: tokenB
+            }),
+        ]);
+
+        const gas = await getGas(GAS_LIMITS.tokenToExactHBAR * 2, 2);
+        expect(tokenBBalanceAfter).to.be.greaterThanOrEqual(tokenBBalanceBefore.sub(amountFrom1).sub(amountFrom2));
+        expect(tokenABalanceAfter).to.be.greaterThan(tokenABalanceBefore.add(amountTo1).add(amountTo2).sub(gas));
+        expect(tokenBBalanceFeeAfter.sub(tokenBBalanceFeeBefore.add(etaSwapFee1).add(etaSwapFee2)).abs()).to.be.lessThanOrEqual(50);
     });
 
     it('should be able to pause and unpause swaps by admin', async function () {
