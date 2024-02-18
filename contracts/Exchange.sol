@@ -42,8 +42,6 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard, IExchange {
 
     /**
      * @dev Sets the adapter for an aggregator. It can't be changed later.
-     * @param aggregatorId Aggregator's identifier
-     * @param addr Address of the contract that contains the logic for this aggregator
      */
     function setAdapter(
         string calldata aggregatorId,
@@ -64,7 +62,6 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard, IExchange {
 
     /**
      * @dev Removes the adapter for an existing aggregator. This can't be undone.
-     * @param aggregatorId Aggregator's identifier
      */
     function removeAdapter(string calldata aggregatorId) external onlyOwner {
         require(adapters[aggregatorId] != address(0), "EtaSwap: ADAPTER_DOES_NOT_EXIST");
@@ -75,7 +72,6 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard, IExchange {
 
     /**
      * @dev Performs a swap
-     * @param aggregatorId Identifier of the aggregator to be used for the swap
      */
     function swap(
         string calldata aggregatorId,
@@ -101,7 +97,6 @@ contract Exchange is Ownable, Pausable, ReentrancyGuard, IExchange {
 
     /**
      * @dev Performs a transactional split swap
-     * @param aggregatorIds Identifiers of the aggregators to be used for the swap
      */
     function splitSwap(
         string[] calldata aggregatorIds,

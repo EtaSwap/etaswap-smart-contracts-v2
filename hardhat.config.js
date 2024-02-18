@@ -15,11 +15,6 @@ task("deploy-oracle", async (taskArgs) => {
   return deployOracle(taskArgs);
 });
 
-task("get-rate-oracle", async (taskArgs) => {
-  const getRateOracle = require("./scripts/getRateOracle");
-  return getRateOracle(taskArgs);
-});
-
 task("get-decimals", async (taskArgs) => {
   const getDecimals = require("./scripts/getDecimals");
   return getDecimals(taskArgs);
@@ -39,11 +34,6 @@ task("get-quote", async (taskArgs) => {
 task("deploy-exchange", async (taskArgs) => {
   const deployExchange = require("./scripts/deployExchange");
   return deployExchange(taskArgs);
-});
-
-task("contract-view-call", async (taskArgs) => {
-  const contractViewCall = require("./scripts/getRateOracle");
-  return contractViewCall(taskArgs);
 });
 
 task("call-exchange", async (taskArgs) => {
